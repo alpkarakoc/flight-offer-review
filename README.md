@@ -1,59 +1,31 @@
-# Client
+# Flight Offer Review
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.24.
+A portfolio project for exploring airline offers with a frontend-first architecture. This is an independent demonstration using synthetic data; it does not integrate with Amadeus or issue tickets.
 
-## Development server
+## Goal
 
-To start a local development server, run:
+Help a user inspect, filter, compare, and select a flight offer while preserving clear states for loading, errors, and unavailable offers.
 
-```bash
-ng serve
-```
+## Planned stack
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- Angular and TypeScript for the client.
+- Java and Spring Boot for a small REST API.
+- In-memory synthetic fixtures for the first vertical slice; persistence is deferred.
+- Angular unit/component tests and JUnit API tests.
 
-## Code scaffolding
+The planned stack describes future work, not implemented functionality. See `docs/requirements.md` for the contract and `docs/decisions.md` for scope decisions.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Current status
 
-```bash
-ng generate component component-name
-```
+The Angular client displays one synthetic flight offer from a typed fixture. The offer list has separate success, empty, loading, and error views. Component tests verify the displayed offer fields and these views.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Verified locally with `npm test -- --watch=false`: 2 test files, 4 tests passed.
 
-```bash
-ng generate --help
-```
+Search input and request-driven state transitions are not implemented yet. There is no backend, real fare data, booking, payment, or ticket issuance.
 
-## Building
+## Delivery sequence
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+1. Implement an accessible, responsive offer list against typed fixtures; test sorting, filtering, and state transitions.
+2. Add a Java REST read endpoint, contract checks, and client integration.
+3. Add offer selection with server-side revalidation and explicit conflict handling.
+4. Add CI, run instructions, screenshots, and a short limitations section after execution evidence exists.

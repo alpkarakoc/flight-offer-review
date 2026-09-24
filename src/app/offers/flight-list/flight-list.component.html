@@ -1,0 +1,32 @@
+@if (status === 'loading') {
+  <p role="status">Loading offers...</p>
+} @else if (status === 'error') {
+  <p role="alert">Unable to load offers.</p>
+} @else {
+  <div class="flight-list">
+    @for (offer of offers; track offer.id) {
+      <div class="offer-card" style="border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+        <div class="header">
+          <strong>{{ offer.airlineCode }}</strong>
+          <span class="offer-id" style="margin-left: 10px; color: #888;">ID: {{ offer.id }}</span>
+          <span class="price" style="float: right; font-weight: bold; color: green;">
+            {{ offer.price }} {{ offer.currency }}
+          </span>
+        </div>
+        <div class="route" style="margin-top: 10px;">
+          <span>{{ offer.origin }} &rarr; {{ offer.destination }}</span>
+        </div>
+        <div class="times" style="margin-top: 5px; font-size: 0.95em;">
+          <span>Departure: {{ offer.departureDate }}</span><br>
+          <span>Arrival: {{ offer.arrivalDate }}</span>
+        </div>
+        <div class="details" style="margin-top: 5px; font-size: 0.9em; color: #555;">
+          <span class="duration">Duration: {{ offer.durationMinutes }} min</span> |
+          <span class="stops">{{ offer.stops === 0 ? 'Direct' : offer.stops + ' Stop(s)' }}</span>
+        </div>
+      </div>
+    } @empty {
+      <p>No offers found.</p>
+    }
+  </div>
+}

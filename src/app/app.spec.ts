@@ -8,16 +8,27 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+it('should render the example offer data correctly', () => {
     const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it('should render title', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
+    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, client');
+
+    const card = compiled.querySelector('.offer-card');
+    expect(card).not.toBeNull();
+    expect(compiled.querySelector('[role="status"]')).toBeNull();
+
+    // Basic checks
+    expect(card?.textContent).toContain('TK');
+    expect(card?.textContent).toContain('TRY');
+    expect(card?.textContent).toContain('IST');
+    expect(card?.textContent).toContain('LHR');
+    expect(card?.textContent).toContain('195 min');
+    expect(card?.textContent).toContain('Direct');
+
+    // R1 required field checks
+    expect(card?.textContent).toContain('OFFER-99X');
+    expect(card?.textContent).toContain('2026-10-14T08:30:00Z');
+    expect(card?.textContent).toContain('2026-10-14T11:45:00Z');
+    expect(card?.textContent).toContain('8500.5');
   });
 });
