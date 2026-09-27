@@ -169,4 +169,64 @@ describe('FlightListComponent', () => {
     expect(element.textContent).not.toContain(exampleOffer.id);
     expect(element.querySelector('[role="status"]')).toBeNull();
   });
+
+  it('keeps the latest result when an earlier search fails later', async () => {
+    const searches: Array<{
+      resolve: (offers: FlightOffer[]) => void;
+      reject: (reason: Error) => void;
+    }> = [];
+
+    const source = {
+      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        return new Promise<FlightOffer[]>((resolve, reject) => {
+          searches.push({ resolve, reject });
+        });
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [
+        { provide: FLIGHT_OFFER_SOURCE, useValue: source },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.whenStable();
+
+    const firstSearch = fixture.componentInstance.search({
+      origin: 'IST',
+      destination: 'LHR',
+      date: '2026-10-14',
+    });
+    const secondSearch = fixture.componentInstance.search({
+      origin: 'IST',
+      destination: 'LHR',
+      date: '2026-10-15',
+    });
+
+    expect(searches).toHaveLength(2);
+
+    const latestOffer: FlightOffer = {
+      ...exampleOffer,
+      id: 'OFFER-LATEST',
+    };
+
+    searches[1].resolve([latestOffer]);
+    await secondSearch;
+    await fixture.whenStable();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.offer-card')?.textContent)
+      .toContain(latestOffer.id);
+
+    searches[0].reject(new Error('Earlier search failed'));
+    await firstSearch;
+    await fixture.whenStable();
+
+    expect(element.querySelector('.offer-card')?.textContent)
+      .toContain(latestOffer.id);
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(element.querySelector('[role="status"]')).toBeNull();
+  });
 });
