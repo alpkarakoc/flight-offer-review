@@ -19,9 +19,9 @@ The planned stack describes future work, not implemented functionality. See `doc
 
 The Angular client displays one synthetic flight offer from a typed fixture. The offer list has separate success, empty, loading, and error views. Component tests verify the displayed offer fields and these views.
 
-Verified locally with `npm test -- --watch=false`: 2 test files, 4 tests passed.
+Verified locally with `npm test -- --watch=false`: 2 test files, 5 tests passed.
 
-Search input and request-driven state transitions are not implemented yet. There is no backend, real fare data, booking, payment, or ticket issuance.
+The component can search a synthetic fixture source and display loading followed by results. Search inputs are not connected to the UI yet, and no network request is made. There is no backend, real fare data, booking, payment, or ticket issuance.
 
 ## Delivery sequence
 
