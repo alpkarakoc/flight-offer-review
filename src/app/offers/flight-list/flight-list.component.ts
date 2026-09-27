@@ -16,19 +16,32 @@ import {
 export class FlightListComponent {
   private readonly offerSource = inject(FLIGHT_OFFER_SOURCE);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private latestSearchId = 0;
 
   offers: FlightOffer[] = [exampleOffer];
   status: 'loading' | 'success' | 'error' = 'success';
 
   async search(criteria: FlightSearchCriteria): Promise<void> {
+    const searchId = ++this.latestSearchId;
+
     this.offers = [];
     this.status = 'loading';
     this.changeDetector.markForCheck();
 
     try {
-      this.offers = await this.offerSource.search(criteria);
+      const offers = await this.offerSource.search(criteria);
+
+      if (searchId !== this.latestSearchId) {
+        return;
+      }
+
+      this.offers = offers;
       this.status = 'success';
     } catch {
+      if (searchId !== this.latestSearchId) {
+        return;
+      }
+
       this.offers = [];
       this.status = 'error';
     }

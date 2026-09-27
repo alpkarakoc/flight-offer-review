@@ -106,4 +106,67 @@ describe('FlightListComponent', () => {
       .toContain(exampleOffer.id);
     expect(element.querySelector('[role="status"]')).toBeNull();
   });
+
+  it('keeps the latest search result when an earlier search finishes later', async () => {
+    const resolveSearches: Array<(offers: FlightOffer[]) => void> = [];
+
+    const source = {
+      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        return new Promise<FlightOffer[]>((resolve) => {
+          resolveSearches.push(resolve);
+        });
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [
+        { provide: FLIGHT_OFFER_SOURCE, useValue: source },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.whenStable();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const firstCriteria: FlightSearchCriteria = {
+      origin: 'IST',
+      destination: 'LHR',
+      date: '2026-10-14',
+    };
+    const secondCriteria: FlightSearchCriteria = {
+      origin: 'IST',
+      destination: 'LHR',
+      date: '2026-10-15',
+    };
+    const latestOffer: FlightOffer = {
+      ...exampleOffer,
+      id: 'OFFER-LATEST',
+    };
+
+    const firstSearch = fixture.componentInstance.search(firstCriteria);
+    const secondSearch = fixture.componentInstance.search(secondCriteria);
+    await fixture.whenStable();
+
+    expect(resolveSearches).toHaveLength(2);
+    expect(element.querySelector('[role="status"]')?.textContent)
+      .toContain('Loading offers...');
+    expect(element.querySelector('.offer-card')).toBeNull();
+
+    resolveSearches[1]([latestOffer]);
+    await secondSearch;
+    await fixture.whenStable();
+
+    expect(element.querySelector('.offer-card')?.textContent)
+      .toContain(latestOffer.id);
+
+    resolveSearches[0]([exampleOffer]);
+    await firstSearch;
+    await fixture.whenStable();
+
+    expect(element.querySelector('.offer-card')?.textContent)
+      .toContain(latestOffer.id);
+    expect(element.textContent).not.toContain(exampleOffer.id);
+    expect(element.querySelector('[role="status"]')).toBeNull();
+  });
 });
