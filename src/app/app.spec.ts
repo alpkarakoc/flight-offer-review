@@ -8,27 +8,15 @@ describe('App', () => {
     }).compileComponents();
   });
 
-it('should render the example offer data correctly', () => {
+  it('renders the search form in idle state without initial offer cards or empty message', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const card = compiled.querySelector('.offer-card');
-    expect(card).not.toBeNull();
+    expect(compiled.querySelector('form')).not.toBeNull();
+    expect(compiled.querySelector('.offer-card')).toBeNull();
     expect(compiled.querySelector('[role="status"]')).toBeNull();
-
-    // Basic checks
-    expect(card?.textContent).toContain('TK');
-    expect(card?.textContent).toContain('TRY');
-    expect(card?.textContent).toContain('IST');
-    expect(card?.textContent).toContain('LHR');
-    expect(card?.textContent).toContain('195 min');
-    expect(card?.textContent).toContain('Direct');
-
-    // R1 required field checks
-    expect(card?.textContent).toContain('OFFER-99X');
-    expect(card?.textContent).toContain('2026-10-14T08:30:00Z');
-    expect(card?.textContent).toContain('2026-10-14T11:45:00Z');
-    expect(card?.textContent).toContain('8500.5');
+    expect(compiled.querySelector('[role="alert"]')).toBeNull();
+    expect(compiled.textContent).not.toContain('No offers found.');
   });
 });

@@ -8,12 +8,28 @@ import {
 import { FlightListComponent } from './flight-list.component';
 
 describe('FlightListComponent', () => {
-  it('shows an empty message without offer cards', async () => {
+  it('renders neither offer cards nor an empty message in initial idle state', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(fixture.componentInstance.status).toBe('idle');
+    expect(element.querySelector('.offer-card')).toBeNull();
+    expect(element.textContent).not.toContain('No offers found.');
+  });
+
+  it('shows an empty message without offer cards when search succeeds with no results', async () => {
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    fixture.componentInstance.status = 'success';
     fixture.componentInstance.offers = [];
     fixture.detectChanges();
 
@@ -34,8 +50,7 @@ describe('FlightListComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('[role="status"]')?.textContent)
-      .toContain('Loading offers...');
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('Loading offers...');
     expect(element.querySelector('.offer-card')).toBeNull();
     expect(element.textContent).not.toContain('No offers found.');
   });
@@ -51,8 +66,7 @@ describe('FlightListComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('[role="alert"]')?.textContent)
-      .toContain('Unable to load offers.');
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain('Unable to load offers.');
     expect(element.querySelector('.offer-card')).toBeNull();
     expect(element.textContent).not.toContain('No offers found.');
     expect(element.textContent).not.toContain('Loading offers...');
@@ -65,7 +79,6 @@ describe('FlightListComponent', () => {
     const source = {
       search(criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         receivedCriteria = criteria;
-
         return new Promise<FlightOffer[]>((resolve) => {
           resolveOffers = resolve;
         });
@@ -74,9 +87,7 @@ describe('FlightListComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
-      providers: [
-        { provide: FLIGHT_OFFER_SOURCE, useValue: source },
-      ],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -93,8 +104,7 @@ describe('FlightListComponent', () => {
     await fixture.whenStable();
 
     expect(receivedCriteria).toEqual(criteria);
-    expect(element.querySelector('[role="status"]')?.textContent)
-      .toContain('Loading offers...');
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('Loading offers...');
     expect(element.querySelector('.offer-card')).toBeNull();
     expect(element.textContent).not.toContain('No offers found.');
 
@@ -102,8 +112,7 @@ describe('FlightListComponent', () => {
     await search;
     await fixture.whenStable();
 
-    expect(element.querySelector('.offer-card')?.textContent)
-      .toContain(exampleOffer.id);
+    expect(element.querySelector('.offer-card')?.textContent).toContain(exampleOffer.id);
     expect(element.querySelector('[role="status"]')).toBeNull();
   });
 
@@ -120,28 +129,21 @@ describe('FlightListComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
-      providers: [
-        { provide: FLIGHT_OFFER_SOURCE, useValue: source },
-      ],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
     await fixture.whenStable();
 
     const element = fixture.nativeElement as HTMLElement;
-    const firstCriteria: FlightSearchCriteria = {
-      origin: 'IST',
-      destination: 'LHR',
-      date: '2026-10-14',
-    };
-    const secondCriteria: FlightSearchCriteria = {
-      origin: 'IST',
-      destination: 'LHR',
-      date: '2026-10-15',
-    };
+    const firstCriteria: FlightSearchCriteria = { origin: 'IST', destination: 'LHR', date: '2026-10-14' };
+    const secondCriteria: FlightSearchCriteria = { origin: 'IST', destination: 'LHR', date: '2026-10-15' };
+
     const latestOffer: FlightOffer = {
       ...exampleOffer,
       id: 'OFFER-LATEST',
+      version: 2,
+      totalPrice: { amountMinor: 750000, currency: 'TRY' },
     };
 
     const firstSearch = fixture.componentInstance.search(firstCriteria);
@@ -149,23 +151,20 @@ describe('FlightListComponent', () => {
     await fixture.whenStable();
 
     expect(resolveSearches).toHaveLength(2);
-    expect(element.querySelector('[role="status"]')?.textContent)
-      .toContain('Loading offers...');
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('Loading offers...');
     expect(element.querySelector('.offer-card')).toBeNull();
 
     resolveSearches[1]([latestOffer]);
     await secondSearch;
     await fixture.whenStable();
 
-    expect(element.querySelector('.offer-card')?.textContent)
-      .toContain(latestOffer.id);
+    expect(element.querySelector('.offer-card')?.textContent).toContain(latestOffer.id);
 
     resolveSearches[0]([exampleOffer]);
     await firstSearch;
     await fixture.whenStable();
 
-    expect(element.querySelector('.offer-card')?.textContent)
-      .toContain(latestOffer.id);
+    expect(element.querySelector('.offer-card')?.textContent).toContain(latestOffer.id);
     expect(element.textContent).not.toContain(exampleOffer.id);
     expect(element.querySelector('[role="status"]')).toBeNull();
   });
@@ -186,30 +185,22 @@ describe('FlightListComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
-      providers: [
-        { provide: FLIGHT_OFFER_SOURCE, useValue: source },
-      ],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
     await fixture.whenStable();
 
-    const firstSearch = fixture.componentInstance.search({
-      origin: 'IST',
-      destination: 'LHR',
-      date: '2026-10-14',
-    });
-    const secondSearch = fixture.componentInstance.search({
-      origin: 'IST',
-      destination: 'LHR',
-      date: '2026-10-15',
-    });
+    const firstSearch = fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    const secondSearch = fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-15' });
 
     expect(searches).toHaveLength(2);
 
     const latestOffer: FlightOffer = {
       ...exampleOffer,
       id: 'OFFER-LATEST',
+      version: 2,
+      totalPrice: { amountMinor: 750000, currency: 'TRY' },
     };
 
     searches[1].resolve([latestOffer]);
@@ -217,16 +208,92 @@ describe('FlightListComponent', () => {
     await fixture.whenStable();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('.offer-card')?.textContent)
-      .toContain(latestOffer.id);
+    expect(element.querySelector('.offer-card')?.textContent).toContain(latestOffer.id);
 
     searches[0].reject(new Error('Earlier search failed'));
     await firstSearch;
     await fixture.whenStable();
 
-    expect(element.querySelector('.offer-card')?.textContent)
-      .toContain(latestOffer.id);
+    expect(element.querySelector('.offer-card')?.textContent).toContain(latestOffer.id);
     expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(element.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('searches with the submitted form values and displays the returned offer with all required fields', async () => {
+    let receivedCriteria: FlightSearchCriteria | undefined;
+    let resolveOffers!: (offers: FlightOffer[]) => void;
+
+    const source = {
+      search(criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        receivedCriteria = criteria;
+        return new Promise<FlightOffer[]>((resolve) => {
+          resolveOffers = resolve;
+        });
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.whenStable();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const form = element.querySelector('form');
+    const origin = element.querySelector<HTMLInputElement>('input[name="origin"]');
+    const destination = element.querySelector<HTMLInputElement>('input[name="destination"]');
+    const date = element.querySelector<HTMLInputElement>('input[name="date"]');
+
+    origin!.value = 'IST';
+    origin!.dispatchEvent(new Event('input', { bubbles: true }));
+    destination!.value = 'LHR';
+    destination!.dispatchEvent(new Event('input', { bubbles: true }));
+    date!.value = '2026-10-14';
+    date!.dispatchEvent(new Event('input', { bubbles: true }));
+
+    form!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+
+    expect(receivedCriteria).toEqual({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    expect(element.querySelector('.offer-card')).toBeNull();
+
+    const returnedOffer: FlightOffer = {
+      id: 'OFFER-FROM-SEARCH',
+      version: 1,
+      airlineCode: 'TK',
+      origin: 'IST',
+      destination: 'LHR',
+      departureDate: '2026-10-14T08:00:00Z',
+      arrivalDate: '2026-10-14T10:00:00Z',
+      durationMinutes: 120,
+      stops: 0,
+      totalPrice: { amountMinor: 500050, currency: 'TRY' },
+    };
+
+    resolveOffers([returnedOffer]);
+    await Promise.resolve();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const card = element.querySelector('.offer-card');
+    expect(card).not.toBeNull();
+
+    expect(card?.querySelector('.offer-id')?.textContent).toContain('ID: OFFER-FROM-SEARCH');
+    expect(card?.querySelector('.route')?.textContent).toContain('IST');
+    expect(card?.querySelector('.route')?.textContent).toContain('LHR');
+    expect(card?.querySelector('.times')?.textContent).toContain('Departure: 2026-10-14T08:00:00Z');
+    expect(card?.querySelector('.times')?.textContent).toContain('Arrival: 2026-10-14T10:00:00Z');
+    expect(card?.querySelector('.duration')?.textContent).toContain('Duration: 120 min');
+    expect(card?.querySelector('.stops')?.textContent).toContain('Stops: 0');
+
+    const priceText = card?.querySelector('.price')?.textContent ?? '';
+    expect(priceText).toContain('TRY');
+    expect(priceText).toContain('5,000.50');
+    expect(priceText).not.toContain('500050');
+
+    expect(element.textContent).not.toContain(exampleOffer.id);
     expect(element.querySelector('[role="status"]')).toBeNull();
   });
 });

@@ -1,28 +1,42 @@
+<form (submit)="onSearchSubmit($event)">
+  <label for="flight-origin">Origin</label>
+  <input id="flight-origin" name="origin" type="text" required>
+
+  <label for="flight-destination">Destination</label>
+  <input id="flight-destination" name="destination" type="text" required>
+
+  <label for="flight-date">Departure date</label>
+  <input id="flight-date" name="date" type="date" required>
+
+  <button type="submit">Search offers</button>
+</form>
+
 @if (status === 'loading') {
   <p role="status">Loading offers...</p>
 } @else if (status === 'error') {
   <p role="alert">Unable to load offers.</p>
-} @else {
+} @else if (status === 'success') {
   <div class="flight-list">
     @for (offer of offers; track offer.id) {
-      <div class="offer-card" style="border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+      <div class="offer-card">
         <div class="header">
           <strong>{{ offer.airlineCode }}</strong>
-          <span class="offer-id" style="margin-left: 10px; color: #888;">ID: {{ offer.id }}</span>
-          <span class="price" style="float: right; font-weight: bold; color: green;">
-            {{ offer.price }} {{ offer.currency }}
+          <span class="offer-id">ID: {{ offer.id }}</span>
+          <span class="price">
+            {{ (offer.totalPrice.amountMinor / 100)
+              | currency:offer.totalPrice.currency:'code':'1.2-2':'en-US' }}
           </span>
         </div>
-        <div class="route" style="margin-top: 10px;">
+        <div class="route">
           <span>{{ offer.origin }} &rarr; {{ offer.destination }}</span>
         </div>
-        <div class="times" style="margin-top: 5px; font-size: 0.95em;">
+        <div class="times">
           <span>Departure: {{ offer.departureDate }}</span><br>
           <span>Arrival: {{ offer.arrivalDate }}</span>
         </div>
-        <div class="details" style="margin-top: 5px; font-size: 0.9em; color: #555;">
+        <div class="details">
           <span class="duration">Duration: {{ offer.durationMinutes }} min</span> |
-          <span class="stops">{{ offer.stops === 0 ? 'Direct' : offer.stops + ' Stop(s)' }}</span>
+          <span class="stops">Stops: {{ offer.stops }}</span>
         </div>
       </div>
     } @empty {

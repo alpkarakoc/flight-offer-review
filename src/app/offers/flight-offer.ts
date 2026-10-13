@@ -1,5 +1,11 @@
+export interface Money {
+  amountMinor: number;
+  currency: 'TRY' | 'EUR' | 'USD';
+}
+
 export interface FlightOffer {
   id: string;
+  version: number;
   airlineCode: string;
   origin: string;
   destination: string;
@@ -7,6 +13,5 @@ export interface FlightOffer {
   arrivalDate: string;
   durationMinutes: number;
   stops: number;
-  price: number;
-  currency: string;
+  totalPrice: Money;
 }

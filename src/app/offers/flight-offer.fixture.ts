@@ -1,14 +1,17 @@
-import { FlightOffer } from './flight-offer';
+import type { FlightOffer } from './flight-offer';
 
 export const exampleOffer: FlightOffer = {
-  id: 'OFFER-99X',
+  id: 'OFFER-1',
+  version: 1,
   airlineCode: 'TK',
   origin: 'IST',
   destination: 'LHR',
-  departureDate: '2026-10-14T08:30:00Z',
-  arrivalDate: '2026-10-14T11:45:00Z',
-  durationMinutes: 195,
+  departureDate: '2026-10-14T08:00:00Z',
+  arrivalDate: '2026-10-14T11:00:00Z',
+  durationMinutes: 180,
   stops: 0,
-  price: 8500.50,
-  currency: 'TRY'
+  totalPrice: {
+    amountMinor: 500000,
+    currency: 'TRY',
+  },
 };

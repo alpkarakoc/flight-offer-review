@@ -1,0 +1,32 @@
+.offer-card {
+  border: 1px solid #ccc;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+
+.offer-id {
+  margin-left: 10px;
+  color: #888;
+}
+
+.price {
+  float: right;
+  font-weight: bold;
+  color: green;
+}
+
+.route {
+  margin-top: 10px;
+}
+
+.times {
+  margin-top: 5px;
+  font-size: 0.95em;
+}
+
+.details {
+  margin-top: 5px;
+  font-size: 0.9em;
+  color: #555;
+}
