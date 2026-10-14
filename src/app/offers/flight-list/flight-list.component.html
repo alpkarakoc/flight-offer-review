@@ -16,31 +16,41 @@
 } @else if (status === 'error') {
   <p role="alert">Unable to load offers.</p>
 } @else if (status === 'success') {
-  <div class="flight-list">
-    @for (offer of offers; track offer.id) {
-      <div class="offer-card">
-        <div class="header">
-          <strong>{{ offer.airlineCode }}</strong>
-          <span class="offer-id">ID: {{ offer.id }}</span>
-          <span class="price">
-            {{ (offer.totalPrice.amountMinor / 100)
-              | currency:offer.totalPrice.currency:'code':'1.2-2':'en-US' }}
-          </span>
+  <label for="offer-sort">Sort offers</label>
+  <select id="offer-sort" #sortSelect [value]="sortOrder"
+    (change)="onSortChange(sortSelect.value)">
+    <option value="original">Original order</option>
+    <option value="price">Price: low to high</option>
+  </select>
+  @if (sortError) {
+    <p role="alert">{{ sortError }}</p>
+  } @else {
+    <div class="flight-list">
+      @for (offer of visibleOffers; track offer.id) {
+        <div class="offer-card">
+          <div class="header">
+            <strong>{{ offer.airlineCode }}</strong>
+            <span class="offer-id">ID: {{ offer.id }}</span>
+            <span class="price">
+              {{ (offer.totalPrice.amountMinor / 100)
+                | currency:offer.totalPrice.currency:'code':'1.2-2':'en-US' }}
+            </span>
+          </div>
+          <div class="route">
+            <span>{{ offer.origin }} &rarr; {{ offer.destination }}</span>
+          </div>
+          <div class="times">
+            <span>Departure: {{ offer.departureDate }}</span><br>
+            <span>Arrival: {{ offer.arrivalDate }}</span>
+          </div>
+          <div class="details">
+            <span class="duration">Duration: {{ offer.durationMinutes }} min</span> |
+            <span class="stops">Stops: {{ offer.stops }}</span>
+          </div>
         </div>
-        <div class="route">
-          <span>{{ offer.origin }} &rarr; {{ offer.destination }}</span>
-        </div>
-        <div class="times">
-          <span>Departure: {{ offer.departureDate }}</span><br>
-          <span>Arrival: {{ offer.arrivalDate }}</span>
-        </div>
-        <div class="details">
-          <span class="duration">Duration: {{ offer.durationMinutes }} min</span> |
-          <span class="stops">Stops: {{ offer.stops }}</span>
-        </div>
-      </div>
-    } @empty {
-      <p>No offers found.</p>
-    }
-  </div>
+      } @empty {
+        <p>No offers found.</p>
+      }
+    </div>
+  }
 }
