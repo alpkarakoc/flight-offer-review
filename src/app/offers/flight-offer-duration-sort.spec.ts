@@ -5,9 +5,24 @@ import { sortOffersByDuration } from './flight-offer-duration-sort';
 describe('sortOffersByDuration', () => {
   it('sorts by duration then ID without changing source data', () => {
     const source = [
-      { ...exampleOffer, id: 'A', durationMinutes: 300 },
-      { ...exampleOffer, id: 'C', durationMinutes: 120 },
-      { ...exampleOffer, id: 'B', durationMinutes: 120 },
+      {
+        ...exampleOffer,
+        totalPrice: { ...exampleOffer.totalPrice },
+        id: 'A',
+        durationMinutes: 300,
+      },
+      {
+        ...exampleOffer,
+        totalPrice: { ...exampleOffer.totalPrice },
+        id: 'C',
+        durationMinutes: 120,
+      },
+      {
+        ...exampleOffer,
+        totalPrice: { ...exampleOffer.totalPrice },
+        id: 'B',
+        durationMinutes: 120,
+      },
     ];
     const before = structuredClone(source);
     source.forEach(offer => {
@@ -28,8 +43,15 @@ describe('sortOffersByDuration', () => {
 
   it.each([-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
     'rejects invalid duration %s', durationMinutes => {
-      expect(() => sortOffersByDuration([{ ...exampleOffer, durationMinutes }]))
-        .toThrow('Invalid duration');
+      expect(() =>
+        sortOffersByDuration([
+          {
+            ...exampleOffer,
+            totalPrice: { ...exampleOffer.totalPrice },
+            durationMinutes,
+          },
+        ]),
+      ).toThrow('Invalid duration');
     },
   );
 });

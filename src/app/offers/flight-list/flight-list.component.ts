@@ -9,6 +9,9 @@ import {
 
 type OfferListStatus = 'idle' | 'loading' | 'success' | 'error';
 
+const DEFAULT_LOAD_ERROR = 'Unable to load offers.';
+const MIXED_CURRENCY_ERROR = 'Cannot display offers: Mixed currencies are not supported.';
+
 @Component({
   selector: 'app-flight-list',
   standalone: true,
@@ -23,6 +26,7 @@ export class FlightListComponent {
 
   offers: FlightOffer[] = [];
   status: OfferListStatus = 'idle';
+  errorMessage = DEFAULT_LOAD_ERROR;
   sortOrder: 'original' | 'price' = 'original';
   sortedOffers: FlightOffer[] = [];
   sortError = '';
@@ -63,6 +67,7 @@ export class FlightListComponent {
     this.sortOrder = 'original';
     this.sortedOffers = [];
     this.sortError = '';
+    this.errorMessage = DEFAULT_LOAD_ERROR;
 
     this.offers = [];
     this.status = 'loading';
@@ -75,6 +80,15 @@ export class FlightListComponent {
         return;
       }
 
+      const currency = offers[0]?.totalPrice.currency;
+      if (offers.some((offer) => offer.totalPrice.currency !== currency)) {
+        this.offers = [];
+        this.errorMessage = MIXED_CURRENCY_ERROR;
+        this.status = 'error';
+        this.changeDetector.markForCheck();
+        return;
+      }
+
       this.offers = offers;
       this.status = 'success';
     } catch {
@@ -83,6 +97,7 @@ export class FlightListComponent {
       }
 
       this.offers = [];
+      this.errorMessage = DEFAULT_LOAD_ERROR;
       this.status = 'error';
     }
 

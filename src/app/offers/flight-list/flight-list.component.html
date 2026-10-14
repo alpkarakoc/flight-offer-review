@@ -14,7 +14,7 @@
 @if (status === 'loading') {
   <p role="status">Loading offers...</p>
 } @else if (status === 'error') {
-  <p role="alert">Unable to load offers.</p>
+  <p role="alert">{{ errorMessage }}</p>
 } @else if (status === 'success') {
   <label for="offer-sort">Sort offers</label>
   <select id="offer-sort" #sortSelect [value]="sortOrder"

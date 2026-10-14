@@ -308,7 +308,7 @@ describe('FlightListComponent', () => {
   });
 
   it('sorts visible cards by price then ID and restores original order without mutating source offers', async () => {
-    const sourceOffers = [makeOffer('C', 501), makeOffer('B', 500), makeOffer('A', 500)];
+    const sourceOffers = [makeOffer('A', 501), makeOffer('C', 500), makeOffer('B', 500)];
     const source = {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
@@ -328,7 +328,7 @@ describe('FlightListComponent', () => {
     const renderedIds = () =>
       Array.from(element.querySelectorAll('.offer-card .offer-id')).map((el) => el.textContent?.trim());
 
-    expect(renderedIds()).toEqual(['ID: C', 'ID: B', 'ID: A']);
+    expect(renderedIds()).toEqual(['ID: A', 'ID: C', 'ID: B']);
 
     const select = element.querySelector<HTMLSelectElement>('#offer-sort');
     expect(select).not.toBeNull();
@@ -337,62 +337,20 @@ describe('FlightListComponent', () => {
     select!.dispatchEvent(new Event('change', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(renderedIds()).toEqual(['ID: A', 'ID: B', 'ID: C']);
-    expect(fixture.componentInstance.offers.map((item) => item.id)).toEqual(['C', 'B', 'A']);
+    expect(renderedIds()).toEqual(['ID: B', 'ID: C', 'ID: A']);
+    expect(fixture.componentInstance.offers.map((item) => item.id)).toEqual(['A', 'C', 'B']);
 
     select!.value = 'original';
     select!.dispatchEvent(new Event('change', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(renderedIds()).toEqual(['ID: C', 'ID: B', 'ID: A']);
+    expect(renderedIds()).toEqual(['ID: A', 'ID: C', 'ID: B']);
   });
 
-  it('shows sort error alert without cards or empty message on mixed currencies and recovers on original order', async () => {
-    const sourceOffers = [makeOffer('A', 100, 'TRY'), makeOffer('B', 100, 'EUR')];
-    const source = {
-      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
-        return Promise.resolve(sourceOffers);
-      },
-    };
-
-    await TestBed.configureTestingModule({
-      imports: [FlightListComponent],
-      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
-    }).compileComponents();
-
-    const fixture = TestBed.createComponent(FlightListComponent);
-    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
-    fixture.detectChanges();
-
-    const element = fixture.nativeElement as HTMLElement;
-    const select = element.querySelector<HTMLSelectElement>('#offer-sort');
-    expect(select).not.toBeNull();
-
-    select!.value = 'price';
-    select!.dispatchEvent(new Event('change', { bubbles: true }));
-    fixture.detectChanges();
-
-    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
-      'Cannot sort offers: prices must be valid and use one currency.',
-    );
-    expect(element.querySelector('.offer-card')).toBeNull();
-    expect(element.textContent).not.toContain('No offers found.');
-
-    select!.value = 'original';
-    select!.dispatchEvent(new Event('change', { bubbles: true }));
-    fixture.detectChanges();
-
-    expect(element.querySelector('[role="alert"]')).toBeNull();
-    const renderedIds = Array.from(element.querySelectorAll('.offer-card .offer-id')).map((el) =>
-      el.textContent?.trim(),
-    );
-    expect(renderedIds).toEqual(['ID: A', 'ID: B']);
-  });
-
-  it('resets sort preference to original when a new search starts', async () => {
-    const batches = [
-      [makeOffer('B', 600), makeOffer('A', 500)],
-      [makeOffer('D', 900), makeOffer('C', 400)],
+  it('rejects mixed-currency search results with an error alert and recovers on a subsequent valid search', async () => {
+    const batches: FlightOffer[][] = [
+      [makeOffer('A', 100, 'TRY'), makeOffer('B', 100, 'EUR')],
+      [makeOffer('A', 200, 'TRY'), makeOffer('B', 100, 'TRY')],
     ];
     let callCount = 0;
 
@@ -412,6 +370,49 @@ describe('FlightListComponent', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Mixed currencies are not supported',
+    );
+    expect(element.querySelector('.offer-card')).toBeNull();
+    expect(element.textContent).not.toContain('No offers found.');
+
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-15' });
+    fixture.detectChanges();
+
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    const renderedIds = Array.from(element.querySelectorAll('.offer-card .offer-id')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(renderedIds).toEqual(['ID: A', 'ID: B']);
+  });
+
+  it('resets sort preference and sort error immediately when a new search starts before response resolves', async () => {
+    let resolveSecondSearch!: (offers: FlightOffer[]) => void;
+    let callCount = 0;
+
+    const source = {
+      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve([makeOffer('A', 501), makeOffer('C', 500), makeOffer('B', 500)]);
+        }
+        return new Promise<FlightOffer[]>((resolve) => {
+          resolveSecondSearch = resolve;
+        });
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
     const renderedIds = () =>
       Array.from(element.querySelectorAll('.offer-card .offer-id')).map((el) => el.textContent?.trim());
 
@@ -420,11 +421,24 @@ describe('FlightListComponent', () => {
 
     select!.value = 'price';
     select!.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.componentInstance.sortError = 'Stale sort error';
     fixture.detectChanges();
 
-    expect(renderedIds()).toEqual(['ID: A', 'ID: B']);
+    expect(fixture.componentInstance.sortOrder).toBe('price');
 
-    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-15' });
+    const secondSearchPromise = fixture.componentInstance.search({
+      origin: 'IST',
+      destination: 'LHR',
+      date: '2026-10-15',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.sortOrder).toBe('original');
+    expect(fixture.componentInstance.sortError).toBe('');
+    expect(element.querySelector('.offer-card')).toBeNull();
+
+    resolveSecondSearch([makeOffer('D', 900), makeOffer('C', 400)]);
+    await secondSearchPromise;
     fixture.detectChanges();
 
     const updatedSelect = element.querySelector<HTMLSelectElement>('#offer-sort');

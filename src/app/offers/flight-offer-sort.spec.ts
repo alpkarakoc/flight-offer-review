@@ -9,12 +9,12 @@ const offer = (
 
 describe('sortOffersByPrice', () => {
   it('sorts by price then ID without changing the source or offers', () => {
-    const source = [offer('C', 501), offer('B', 500), offer('A', 500)];
+    const source = [offer('A', 501), offer('C', 500), offer('B', 500)];
     const before = structuredClone(source);
     source.forEach(item => { Object.freeze(item.totalPrice); Object.freeze(item); });
     Object.freeze(source);
     const result = sortOffersByPrice(source);
-    expect(result.map(item => item.id)).toEqual(['A', 'B', 'C']);
+    expect(result.map(item => item.id)).toEqual(['B', 'C', 'A']);
     expect(source).toEqual(before);
     expect(result).not.toBe(source);
     expect(sortOffersByPrice([...source].reverse())).toEqual(result);
