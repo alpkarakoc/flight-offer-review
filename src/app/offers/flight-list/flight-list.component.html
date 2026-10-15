@@ -21,6 +21,7 @@
     (change)="onSortChange(sortSelect.value)">
     <option value="original">Original order</option>
     <option value="price">Price: low to high</option>
+    <option value="duration">Duration: shortest to longest</option>
   </select>
   @if (sortError) {
     <p role="alert">{{ sortError }}</p>

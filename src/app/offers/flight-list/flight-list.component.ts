@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import type { FlightOffer } from '../flight-offer';
+import { sortOffersByDuration } from '../flight-offer-duration-sort';
 import { sortOffersByPrice } from '../flight-offer-sort';
 import {
   FLIGHT_OFFER_SOURCE,
@@ -8,6 +9,7 @@ import {
 } from '../flight-offer-source';
 
 type OfferListStatus = 'idle' | 'loading' | 'success' | 'error';
+type OfferSortOrder = 'original' | 'price' | 'duration';
 
 const DEFAULT_LOAD_ERROR = 'Unable to load offers.';
 const MIXED_CURRENCY_ERROR = 'Cannot display offers: Mixed currencies are not supported.';
@@ -27,16 +29,16 @@ export class FlightListComponent {
   offers: FlightOffer[] = [];
   status: OfferListStatus = 'idle';
   errorMessage = DEFAULT_LOAD_ERROR;
-  sortOrder: 'original' | 'price' = 'original';
+  sortOrder: OfferSortOrder = 'original';
   sortedOffers: FlightOffer[] = [];
   sortError = '';
 
   get visibleOffers(): FlightOffer[] {
-    return this.sortOrder === 'price' ? this.sortedOffers : this.offers;
+    return this.sortOrder === 'original' ? this.offers : this.sortedOffers;
   }
 
   onSortChange(value: string): void {
-    if (value !== 'original' && value !== 'price') return;
+    if (value !== 'original' && value !== 'price' && value !== 'duration') return;
     this.sortOrder = value;
     this.sortError = '';
     this.sortedOffers = [];
@@ -45,6 +47,12 @@ export class FlightListComponent {
         this.sortedOffers = sortOffersByPrice(this.offers);
       } catch {
         this.sortError = 'Cannot sort offers: prices must be valid and use one currency.';
+      }
+    } else if (value === 'duration') {
+      try {
+        this.sortedOffers = sortOffersByDuration(this.offers);
+      } catch {
+        this.sortError = 'Cannot sort offers: durations must be valid.';
       }
     }
   }
