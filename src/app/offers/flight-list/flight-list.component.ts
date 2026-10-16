@@ -35,6 +35,7 @@ export class FlightListComponent {
   maxStops: number | null = null;
   visibleOffers: FlightOffer[] = [];
   sortError = '';
+  expandedOfferIds = new Set<string>();
 
   onSortChange(value: string): void {
     if (value !== 'original' && value !== 'price' && value !== 'duration') return;
@@ -72,6 +73,14 @@ export class FlightListComponent {
     this.visibleOffers = result;
   }
 
+  toggleDetails(offerId: string): void {
+    if (this.expandedOfferIds.has(offerId)) {
+      this.expandedOfferIds.delete(offerId);
+    } else {
+      this.expandedOfferIds.add(offerId);
+    }
+  }
+
   onSearchSubmit(event: Event): void {
     event.preventDefault();
 
@@ -92,6 +101,7 @@ export class FlightListComponent {
     this.visibleOffers = [];
     this.sortError = '';
     this.errorMessage = DEFAULT_LOAD_ERROR;
+    this.expandedOfferIds.clear();
 
     this.offers = [];
     this.status = 'loading';

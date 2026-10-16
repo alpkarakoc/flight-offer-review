@@ -59,6 +59,33 @@
             <span class="duration">Duration: {{ offer.durationMinutes }} min</span> |
             <span class="stops">Stops: {{ offer.stops }}</span>
           </div>
+          
+          <div class="actions">
+            <button class="toggle-details" 
+                    [attr.aria-expanded]="expandedOfferIds.has(offer.id)" 
+                    (click)="toggleDetails(offer.id)">
+              {{ expandedOfferIds.has(offer.id) ? 'Hide details' : 'Show details' }}
+            </button>
+          </div>
+
+          @if (expandedOfferIds.has(offer.id)) {
+            <div class="offer-details">
+              <div class="segments">
+                @for (segment of offer.segments; track $index) {
+                  <div class="segment">
+                    <span>{{ segment.airlineCode }} {{ segment.flightNumber }}</span>
+                    <span>{{ segment.origin }} &rarr; {{ segment.destination }}</span>
+                    <span>{{ segment.departureDate }} - {{ segment.arrivalDate }}</span>
+                  </div>
+                }
+              </div>
+              <div class="price-breakdown">
+                <div>Base fare: {{ (offer.priceBreakdown.baseFareMinor / 100) | currency:offer.totalPrice.currency:'code':'1.2-2':'en-US' }}</div>
+                <div>Taxes: {{ (offer.priceBreakdown.taxesMinor / 100) | currency:offer.totalPrice.currency:'code':'1.2-2':'en-US' }}</div>
+                <div>Fees: {{ (offer.priceBreakdown.feesMinor / 100) | currency:offer.totalPrice.currency:'code':'1.2-2':'en-US' }}</div>
+              </div>
+            </div>
+          }
         </div>
       } @empty {
         <p>No offers found.</p>

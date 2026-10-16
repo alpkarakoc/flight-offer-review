@@ -3,6 +3,21 @@ export interface Money {
   currency: 'TRY' | 'EUR' | 'USD';
 }
 
+export interface FlightSegment {
+  origin: string;
+  destination: string;
+  departureDate: string;
+  arrivalDate: string;
+  airlineCode: string;
+  flightNumber: string;
+}
+
+export interface PriceBreakdown {
+  baseFareMinor: number;
+  taxesMinor: number;
+  feesMinor: number;
+}
+
 export interface FlightOffer {
   id: string;
   version: number;
@@ -14,4 +29,6 @@ export interface FlightOffer {
   durationMinutes: number;
   stops: number;
   totalPrice: Money;
+  segments: FlightSegment[];
+  priceBreakdown: PriceBreakdown;
 }

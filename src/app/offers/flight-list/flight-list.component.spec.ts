@@ -13,13 +13,21 @@ const makeOffer = (
   currency: Money['currency'] = 'TRY',
   durationMinutes = exampleOffer.durationMinutes,
   stops = exampleOffer.stops,
-): FlightOffer => ({
-  ...exampleOffer,
-  id,
-  durationMinutes,
-  stops,
-  totalPrice: { amountMinor, currency },
-});
+): FlightOffer => {
+  const taxesMinor = Math.floor(amountMinor * 0.1);
+  const feesMinor = Math.floor(amountMinor * 0.1);
+  const baseFareMinor = amountMinor - taxesMinor - feesMinor;
+  
+  return {
+    ...exampleOffer,
+    id,
+    durationMinutes,
+    stops,
+    totalPrice: { amountMinor, currency },
+    segments: exampleOffer.segments,
+    priceBreakdown: { baseFareMinor, taxesMinor, feesMinor },
+  };
+};
 
 describe('FlightListComponent', () => {
   it('renders neither offer cards nor an empty message in initial idle state', async () => {
@@ -284,6 +292,8 @@ describe('FlightListComponent', () => {
       durationMinutes: 120,
       stops: 0,
       totalPrice: { amountMinor: 500050, currency: 'TRY' },
+      segments: [],
+      priceBreakdown: { baseFareMinor: 500050, taxesMinor: 0, feesMinor: 0 },
     };
 
     resolveOffers([returnedOffer]);
@@ -703,5 +713,57 @@ describe('FlightListComponent', () => {
     expect(updatedFilter?.value).toBe('any');
     expect(element.querySelector('.offer-card')).not.toBeNull();
     expect(element.textContent).not.toContain('No offers found.');
+  });
+
+  it('expands and collapses offer details showing segments and price breakdown on button click', async () => {
+    const source = {
+      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        return Promise.resolve([makeOffer('OFFER-DETAILS', 500000, 'TRY', 180, 0)]);
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const card = element.querySelector('.offer-card');
+    expect(card).not.toBeNull();
+
+    const toggleButton = card!.querySelector<HTMLButtonElement>('button.toggle-details');
+    expect(toggleButton).not.toBeNull();
+    expect(toggleButton!.textContent).toContain('Show details');
+    expect(toggleButton!.getAttribute('aria-expanded')).toBe('false');
+
+    let details = card!.querySelector('.offer-details');
+    expect(details).toBeNull();
+
+    toggleButton!.click();
+    fixture.detectChanges();
+
+    expect(toggleButton!.getAttribute('aria-expanded')).toBe('true');
+    details = card!.querySelector('.offer-details');
+    expect(details).not.toBeNull();
+    
+    expect(details!.textContent).toContain('TK 1979');
+    expect(details!.textContent).toContain('IST');
+    expect(details!.textContent).toContain('LHR');
+    
+    expect(details!.textContent).toContain('Base fare');
+    expect(details!.textContent).toContain('4,000.00');
+    expect(details!.textContent).toContain('Taxes');
+    expect(details!.textContent).toContain('500.00');
+    expect(details!.textContent).toContain('Fees');
+
+    toggleButton!.click();
+    fixture.detectChanges();
+
+    expect(toggleButton!.getAttribute('aria-expanded')).toBe('false');
+    expect(card!.querySelector('.offer-details')).toBeNull();
   });
 });
