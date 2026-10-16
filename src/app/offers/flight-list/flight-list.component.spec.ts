@@ -970,4 +970,65 @@ describe('FlightListComponent', () => {
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(element.querySelector('.offer-card')).not.toBeNull();
   });
+
+  it('validates an offer selection successfully', async () => {
+    let resolveSelection!: (res: any) => void;
+    const source = {
+      search: () => Promise.resolve([exampleOffer]),
+      select: () => new Promise<any>((resolve) => { resolveSelection = resolve; })
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const selectButton = element.querySelector<HTMLButtonElement>('button.select-offer');
+    
+    selectButton!.click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.selection-status')?.textContent).toContain('Validating selection...');
+    expect(selectButton?.disabled).toBe(true);
+
+    resolveSelection({ status: 'VALIDATED', offerId: exampleOffer.id, version: exampleOffer.version });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const statusEl = element.querySelector('.selection-status');
+    expect(statusEl?.classList.contains('validated')).toBe(true);
+    expect(statusEl?.textContent).toContain('Selection validated');
+    expect(selectButton?.disabled).toBe(false);
+  });
+
+  it('shows a conflict error when selection fails with OFFER_STALE', async () => {
+    const source = {
+      search: () => Promise.resolve([exampleOffer]),
+      select: () => Promise.reject(new Error('OFFER_STALE'))
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('button.select-offer')!.click();
+    
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const statusEl = element.querySelector('.selection-status');
+    expect(statusEl?.classList.contains('conflict')).toBe(true);
+    expect(statusEl?.textContent).toContain('OFFER_STALE');
+  });
 });
