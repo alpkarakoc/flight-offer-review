@@ -24,7 +24,7 @@ const makeOffer = (
     durationMinutes,
     stops,
     totalPrice: { amountMinor, currency },
-    segments: exampleOffer.segments,
+    segments: exampleOffer.segments.map(seg => ({ ...seg })),
     priceBreakdown: { baseFareMinor, taxesMinor, feesMinor },
   };
 };
@@ -166,6 +166,7 @@ describe('FlightListComponent', () => {
       id: 'OFFER-LATEST',
       version: 2,
       totalPrice: { amountMinor: 750000, currency: 'TRY' },
+      priceBreakdown: { baseFareMinor: 750000, taxesMinor: 0, feesMinor: 0 }
     };
 
     const firstSearch = fixture.componentInstance.search(firstCriteria);
@@ -223,6 +224,7 @@ describe('FlightListComponent', () => {
       id: 'OFFER-LATEST',
       version: 2,
       totalPrice: { amountMinor: 750000, currency: 'TRY' },
+      priceBreakdown: { baseFareMinor: 750000, taxesMinor: 0, feesMinor: 0 }
     };
 
     searches[1].resolve([latestOffer]);
@@ -292,7 +294,14 @@ describe('FlightListComponent', () => {
       durationMinutes: 120,
       stops: 0,
       totalPrice: { amountMinor: 500050, currency: 'TRY' },
-      segments: [],
+      segments: [{
+          origin: 'IST',
+          destination: 'LHR',
+          departureDate: '2026-10-14T08:00:00Z',
+          arrivalDate: '2026-10-14T10:00:00Z',
+          airlineCode: 'TK',
+          flightNumber: '1979',
+      }],
       priceBreakdown: { baseFareMinor: 500050, taxesMinor: 0, feesMinor: 0 },
     };
 
@@ -604,9 +613,63 @@ describe('FlightListComponent', () => {
 
   it('filters visible cards by max stops without mutating source offers', async () => {
     const sourceOffers = [
-      makeOffer('A', 500, 'TRY', 120, 0),
-      makeOffer('B', 600, 'TRY', 120, 1),
-      makeOffer('C', 700, 'TRY', 120, 2),
+      {
+          ...makeOffer('A', 500, 'TRY', 120, 0),
+          segments: [{
+              origin: 'IST',
+              destination: 'LHR',
+              departureDate: '2026-10-14T08:00:00Z',
+              arrivalDate: '2026-10-14T10:00:00Z',
+              airlineCode: 'TK',
+              flightNumber: '1979',
+          }]
+      },
+      {
+          ...makeOffer('B', 600, 'TRY', 120, 1),
+          segments: [{
+              origin: 'IST',
+              destination: 'FRA',
+              departureDate: '2026-10-14T08:00:00Z',
+              arrivalDate: '2026-10-14T09:00:00Z',
+              airlineCode: 'TK',
+              flightNumber: '1000',
+          },
+          {
+              origin: 'FRA',
+              destination: 'LHR',
+              departureDate: '2026-10-14T09:30:00Z',
+              arrivalDate: '2026-10-14T10:00:00Z',
+              airlineCode: 'LH',
+              flightNumber: '1001',
+          }]
+      },
+      {
+          ...makeOffer('C', 700, 'TRY', 120, 2),
+          segments: [{
+              origin: 'IST',
+              destination: 'FRA',
+              departureDate: '2026-10-14T08:00:00Z',
+              arrivalDate: '2026-10-14T08:30:00Z',
+              airlineCode: 'TK',
+              flightNumber: '1000',
+          },
+          {
+              origin: 'FRA',
+              destination: 'CDG',
+              departureDate: '2026-10-14T08:45:00Z',
+              arrivalDate: '2026-10-14T09:30:00Z',
+              airlineCode: 'LH',
+              flightNumber: '1001',
+          },
+          {
+              origin: 'CDG',
+              destination: 'LHR',
+              departureDate: '2026-10-14T09:45:00Z',
+              arrivalDate: '2026-10-14T10:00:00Z',
+              airlineCode: 'AF',
+              flightNumber: '1002',
+          }]
+      },
     ];
     const source = {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
@@ -646,9 +709,63 @@ describe('FlightListComponent', () => {
 
   it('combines filtering and sorting correctly', async () => {
     const sourceOffers = [
-      makeOffer('A', 700, 'TRY', 120, 1),
-      makeOffer('C', 500, 'TRY', 120, 0),
-      makeOffer('B', 600, 'TRY', 120, 2),
+      {
+          ...makeOffer('A', 700, 'TRY', 120, 1),
+          segments: [{
+              origin: 'IST',
+              destination: 'FRA',
+              departureDate: '2026-10-14T08:00:00Z',
+              arrivalDate: '2026-10-14T09:00:00Z',
+              airlineCode: 'TK',
+              flightNumber: '1000',
+          },
+          {
+              origin: 'FRA',
+              destination: 'LHR',
+              departureDate: '2026-10-14T09:30:00Z',
+              arrivalDate: '2026-10-14T10:00:00Z',
+              airlineCode: 'LH',
+              flightNumber: '1001',
+          }]
+      },
+      {
+          ...makeOffer('C', 500, 'TRY', 120, 0),
+          segments: [{
+              origin: 'IST',
+              destination: 'LHR',
+              departureDate: '2026-10-14T08:00:00Z',
+              arrivalDate: '2026-10-14T10:00:00Z',
+              airlineCode: 'TK',
+              flightNumber: '1979',
+          }]
+      },
+      {
+          ...makeOffer('B', 600, 'TRY', 120, 2),
+          segments: [{
+              origin: 'IST',
+              destination: 'FRA',
+              departureDate: '2026-10-14T08:00:00Z',
+              arrivalDate: '2026-10-14T08:30:00Z',
+              airlineCode: 'TK',
+              flightNumber: '1000',
+          },
+          {
+              origin: 'FRA',
+              destination: 'CDG',
+              departureDate: '2026-10-14T08:45:00Z',
+              arrivalDate: '2026-10-14T09:30:00Z',
+              airlineCode: 'LH',
+              flightNumber: '1001',
+          },
+          {
+              origin: 'CDG',
+              destination: 'LHR',
+              departureDate: '2026-10-14T09:45:00Z',
+              arrivalDate: '2026-10-14T10:00:00Z',
+              airlineCode: 'AF',
+              flightNumber: '1002',
+          }]
+      },
     ];
     const source = {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
@@ -680,7 +797,35 @@ describe('FlightListComponent', () => {
   });
 
   it('shows empty message when filter excludes all offers and resets on new search', async () => {
-    const sourceOffers = [makeOffer('A', 500, 'TRY', 120, 2)];
+    const sourceOffers = [
+      {
+          ...makeOffer('A', 500, 'TRY', 120, 2),
+          segments: [{
+              origin: 'IST',
+              destination: 'FRA',
+              departureDate: '2026-10-14T08:00:00Z',
+              arrivalDate: '2026-10-14T08:30:00Z',
+              airlineCode: 'TK',
+              flightNumber: '1000',
+          },
+          {
+              origin: 'FRA',
+              destination: 'CDG',
+              departureDate: '2026-10-14T08:45:00Z',
+              arrivalDate: '2026-10-14T09:30:00Z',
+              airlineCode: 'LH',
+              flightNumber: '1001',
+          },
+          {
+              origin: 'CDG',
+              destination: 'LHR',
+              departureDate: '2026-10-14T09:45:00Z',
+              arrivalDate: '2026-10-14T10:00:00Z',
+              airlineCode: 'AF',
+              flightNumber: '1002',
+          }]
+      }
+    ];
     const source = {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
@@ -765,5 +910,40 @@ describe('FlightListComponent', () => {
 
     expect(toggleButton!.getAttribute('aria-expanded')).toBe('false');
     expect(card!.querySelector('.offer-details')).toBeNull();
+  });
+
+  it('rejects search results with invalid itinerary or price breakdown and recovers on valid search', async () => {
+    const invalidOffer: FlightOffer = {
+      ...exampleOffer,
+      priceBreakdown: { baseFareMinor: 0, taxesMinor: 0, feesMinor: 0 },
+    };
+    const batches: FlightOffer[][] = [ [invalidOffer], [exampleOffer] ];
+    let callCount = 0;
+
+    const source = {
+      search(): Promise<FlightOffer[]> { return Promise.resolve(batches[callCount++]); },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    const element = fixture.nativeElement as HTMLElement;
+
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Cannot display offers: invalid itinerary or price breakdown.',
+    );
+    expect(element.querySelector('.offer-card')).toBeNull();
+
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-15' });
+    fixture.detectChanges();
+
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(element.querySelector('.offer-card')).not.toBeNull();
   });
 });
