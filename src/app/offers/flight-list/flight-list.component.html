@@ -16,13 +16,24 @@
 } @else if (status === 'error') {
   <p role="alert">{{ errorMessage }}</p>
 } @else if (status === 'success') {
-  <label for="offer-sort">Sort offers</label>
-  <select id="offer-sort" #sortSelect [value]="sortOrder"
-    (change)="onSortChange(sortSelect.value)">
-    <option value="original">Original order</option>
-    <option value="price">Price: low to high</option>
-    <option value="duration">Duration: shortest to longest</option>
-  </select>
+  <div class="controls">
+    <label for="offer-sort">Sort offers</label>
+    <select id="offer-sort" #sortSelect [value]="sortOrder"
+      (change)="onSortChange(sortSelect.value)">
+      <option value="original">Original order</option>
+      <option value="price">Price: low to high</option>
+      <option value="duration">Duration: shortest to longest</option>
+    </select>
+
+    <label for="stops-filter">Max stops</label>
+    <select id="stops-filter" #stopsSelect [value]="maxStops === null ? 'any' : maxStops"
+      (change)="onFilterChange(stopsSelect.value)">
+      <option value="any">Any number of stops</option>
+      <option value="0">Direct only</option>
+      <option value="1">Up to 1 stop</option>
+      <option value="2">Up to 2 stops</option>
+    </select>
+  </div>
   @if (sortError) {
     <p role="alert">{{ sortError }}</p>
   } @else {

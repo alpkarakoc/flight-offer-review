@@ -12,10 +12,12 @@ const makeOffer = (
   amountMinor: number,
   currency: Money['currency'] = 'TRY',
   durationMinutes = exampleOffer.durationMinutes,
+  stops = exampleOffer.stops,
 ): FlightOffer => ({
   ...exampleOffer,
   id,
   durationMinutes,
+  stops,
   totalPrice: { amountMinor, currency },
 });
 
@@ -588,5 +590,118 @@ describe('FlightListComponent', () => {
     const updatedSelect = element.querySelector<HTMLSelectElement>('#offer-sort');
     expect(updatedSelect?.value).toBe('original');
     expect(renderedIds()).toEqual(['ID: D', 'ID: C']);
+  });
+
+  it('filters visible cards by max stops without mutating source offers', async () => {
+    const sourceOffers = [
+      makeOffer('A', 500, 'TRY', 120, 0),
+      makeOffer('B', 600, 'TRY', 120, 1),
+      makeOffer('C', 700, 'TRY', 120, 2),
+    ];
+    const source = {
+      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        return Promise.resolve(sourceOffers);
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const renderedIds = () =>
+      Array.from(element.querySelectorAll('.offer-card .offer-id')).map((el) => el.textContent?.trim());
+
+    const select = element.querySelector<HTMLSelectElement>('#stops-filter');
+    expect(select).not.toBeNull();
+
+    select!.value = '0';
+    select!.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(renderedIds()).toEqual(['ID: A']);
+    expect(fixture.componentInstance.offers.map((item) => item.id)).toEqual(['A', 'B', 'C']);
+
+    select!.value = 'any';
+    select!.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(renderedIds()).toEqual(['ID: A', 'ID: B', 'ID: C']);
+  });
+
+  it('combines filtering and sorting correctly', async () => {
+    const sourceOffers = [
+      makeOffer('A', 700, 'TRY', 120, 1),
+      makeOffer('C', 500, 'TRY', 120, 0),
+      makeOffer('B', 600, 'TRY', 120, 2),
+    ];
+    const source = {
+      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        return Promise.resolve(sourceOffers);
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const filterSelect = element.querySelector<HTMLSelectElement>('#stops-filter');
+    const sortSelect = element.querySelector<HTMLSelectElement>('#offer-sort');
+
+    filterSelect!.value = '1';
+    filterSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+    sortSelect!.value = 'price';
+    sortSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+
+    const renderedIds = Array.from(element.querySelectorAll('.offer-card .offer-id')).map((el) => el.textContent?.trim());
+    expect(renderedIds).toEqual(['ID: C', 'ID: A']);
+  });
+
+  it('shows empty message when filter excludes all offers and resets on new search', async () => {
+    const sourceOffers = [makeOffer('A', 500, 'TRY', 120, 2)];
+    const source = {
+      search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
+        return Promise.resolve(sourceOffers);
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const filterSelect = element.querySelector<HTMLSelectElement>('#stops-filter');
+
+    filterSelect!.value = '0';
+    filterSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(element.querySelector('.offer-card')).toBeNull();
+    expect(element.textContent).toContain('No offers found.');
+
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-15' });
+    fixture.detectChanges();
+
+    const updatedFilter = element.querySelector<HTMLSelectElement>('#stops-filter');
+    expect(updatedFilter?.value).toBe('any');
+    expect(element.querySelector('.offer-card')).not.toBeNull();
+    expect(element.textContent).not.toContain('No offers found.');
   });
 });
