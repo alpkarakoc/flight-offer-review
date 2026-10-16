@@ -1,10 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { FLIGHT_OFFER_SOURCE } from './offers/flight-offer-source';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
+      providers: [
+        { provide: FLIGHT_OFFER_SOURCE, useValue: { search: () => Promise.resolve([]), select: () => Promise.resolve({}) } }
+      ]
     }).compileComponents();
   });
 

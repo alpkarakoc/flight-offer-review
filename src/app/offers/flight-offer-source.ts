@@ -1,6 +1,5 @@
 import { InjectionToken } from '@angular/core';
 import type { FlightOffer } from './flight-offer';
-import { exampleOffer } from './flight-offer.fixture';
 
 export interface FlightSearchCriteria {
   origin: string;
@@ -8,23 +7,20 @@ export interface FlightSearchCriteria {
   date: string;
 }
 
-export interface FlightOfferSource {
-  search(criteria: FlightSearchCriteria): Promise<FlightOffer[]>;
+export interface SelectionRequest {
+  offerId: string;
+  version: number;
 }
 
-export const FLIGHT_OFFER_SOURCE = new InjectionToken<FlightOfferSource>(
-  'FlightOfferSource',
-  {
-    providedIn: 'root',
-    factory: () => ({
-      search: async (criteria) => {
-        const matches =
-          criteria.origin === exampleOffer.origin &&
-          criteria.destination === exampleOffer.destination &&
-          criteria.date === exampleOffer.departureDate.slice(0, 10);
+export interface SelectionResponse {
+  status: string;
+  offerId: string;
+  version: number;
+}
 
-        return matches ? [exampleOffer] : [];
-      },
-    }),
-  },
-);
+export interface FlightOfferSource {
+  search(criteria: FlightSearchCriteria): Promise<FlightOffer[]>;
+  select(request: SelectionRequest): Promise<SelectionResponse>;
+}
+
+export const FLIGHT_OFFER_SOURCE = new InjectionToken<FlightOfferSource>('FLIGHT_OFFER_SOURCE');

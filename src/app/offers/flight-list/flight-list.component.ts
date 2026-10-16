@@ -4,17 +4,20 @@ import type { FlightOffer } from '../flight-offer';
 import { sortOffersByDuration } from '../flight-offer-duration-sort';
 import { sortOffersByPrice } from '../flight-offer-sort';
 import { filterOffersByMaxStops } from '../flight-offer-filter';
+import { isValidOfferDetails } from '../flight-offer-validation';
 import {
   FLIGHT_OFFER_SOURCE,
   type FlightSearchCriteria,
 } from '../flight-offer-source';
 
 type OfferListStatus = 'idle' | 'loading' | 'success' | 'error';
+type SelectionStatus = 'idle' | 'validating' | 'validated' | 'conflict' | 'error';
 type OfferSortOrder = 'original' | 'price' | 'duration';
 
 const DEFAULT_LOAD_ERROR = 'Unable to load offers.';
 const MIXED_CURRENCY_ERROR = 'Cannot display offers: Mixed currencies are not supported.';
 const INVALID_VALUES_ERROR = 'Cannot display offers: invalid price or duration.';
+const INVALID_DETAILS_ERROR = 'Cannot display offers: invalid itinerary or price breakdown.';
 
 @Component({
   selector: 'app-flight-list',
@@ -31,11 +34,16 @@ export class FlightListComponent {
   offers: FlightOffer[] = [];
   status: OfferListStatus = 'idle';
   errorMessage = DEFAULT_LOAD_ERROR;
+  
   sortOrder: OfferSortOrder = 'original';
   maxStops: number | null = null;
   visibleOffers: FlightOffer[] = [];
   sortError = '';
   expandedOfferIds = new Set<string>();
+
+  selectionStatus: SelectionStatus = 'idle';
+  selectionMessage = '';
+  selectedOfferId: string | null = null;
 
   onSortChange(value: string): void {
     if (value !== 'original' && value !== 'price' && value !== 'duration') return;
@@ -81,6 +89,40 @@ export class FlightListComponent {
     }
   }
 
+  async selectOffer(offerId: string, version: number): Promise<void> {
+    if (this.selectionStatus === 'validating') return;
+    
+    this.selectionStatus = 'validating';
+    this.selectedOfferId = offerId;
+    this.selectionMessage = 'Validating selection...';
+    this.changeDetector.markForCheck();
+
+    try {
+      const response = await this.offerSource.select({ offerId, version });
+      
+      if (response.status === 'VALIDATED') {
+        this.selectionStatus = 'validated';
+        this.selectionMessage = 'Selection validated';
+      } else {
+        this.selectionStatus = 'error';
+        this.selectionMessage = 'Unexpected validation status.';
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message === 'OFFER_STALE' || error.message === 'OFFER_UNAVAILABLE') {
+            this.selectionStatus = 'conflict';
+        } else {
+            this.selectionStatus = 'error';
+        }
+        this.selectionMessage = error.message;
+      } else {
+        this.selectionStatus = 'error';
+        this.selectionMessage = 'An unexpected error occurred during validation.';
+      }
+    }
+    this.changeDetector.markForCheck();
+  }
+
   onSearchSubmit(event: Event): void {
     event.preventDefault();
 
@@ -102,6 +144,10 @@ export class FlightListComponent {
     this.sortError = '';
     this.errorMessage = DEFAULT_LOAD_ERROR;
     this.expandedOfferIds.clear();
+    
+    this.selectionStatus = 'idle';
+    this.selectionMessage = '';
+    this.selectedOfferId = null;
 
     this.offers = [];
     this.status = 'loading';
@@ -134,6 +180,15 @@ export class FlightListComponent {
       if (hasInvalidValues) {
         this.offers = [];
         this.errorMessage = INVALID_VALUES_ERROR;
+        this.status = 'error';
+        this.changeDetector.markForCheck();
+        return;
+      }
+
+      const hasInvalidDetails = offers.some((offer) => !isValidOfferDetails(offer));
+      if (hasInvalidDetails) {
+        this.offers = [];
+        this.errorMessage = INVALID_DETAILS_ERROR;
         this.status = 'error';
         this.changeDetector.markForCheck();
         return;

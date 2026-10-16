@@ -29,10 +29,16 @@ const makeOffer = (
   };
 };
 
+const dummySource = {
+  search: () => Promise.resolve([]),
+  select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+};
+
 describe('FlightListComponent', () => {
   it('renders neither offer cards nor an empty message in initial idle state', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -48,6 +54,7 @@ describe('FlightListComponent', () => {
   it('shows an empty message without offer cards when search succeeds with no results', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -64,6 +71,7 @@ describe('FlightListComponent', () => {
   it('shows loading status without offers or an empty message', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -80,6 +88,7 @@ describe('FlightListComponent', () => {
   it('shows an error alert without stale offers or other states', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -105,6 +114,7 @@ describe('FlightListComponent', () => {
           resolveOffers = resolve;
         });
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -147,6 +157,7 @@ describe('FlightListComponent', () => {
           resolveSearches.push(resolve);
         });
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -204,6 +215,7 @@ describe('FlightListComponent', () => {
           searches.push({ resolve, reject });
         });
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -254,6 +266,7 @@ describe('FlightListComponent', () => {
           resolveOffers = resolve;
         });
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -336,6 +349,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -380,6 +394,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -425,6 +440,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(batches[callCount++]);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -474,6 +490,7 @@ describe('FlightListComponent', () => {
           resolveSearches.push(resolve);
         });
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -523,6 +540,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(batches[callCount++]);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -566,6 +584,7 @@ describe('FlightListComponent', () => {
           resolveSecondSearch = resolve;
         });
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -675,6 +694,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -771,6 +791,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -830,6 +851,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -865,6 +887,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve([makeOffer('OFFER-DETAILS', 500000, 'TRY', 180, 0)]);
       },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({
@@ -922,6 +945,7 @@ describe('FlightListComponent', () => {
 
     const source = {
       search(): Promise<FlightOffer[]> { return Promise.resolve(batches[callCount++]); },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
     };
 
     await TestBed.configureTestingModule({

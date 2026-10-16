@@ -37,9 +37,16 @@
   @if (sortError) {
     <p role="alert">{{ sortError }}</p>
   } @else {
+    
+    @if (selectionStatus !== 'idle') {
+      <div class="selection-status" role="alert" [ngClass]="selectionStatus">
+        {{ selectionMessage }}
+      </div>
+    }
+
     <div class="flight-list">
       @for (offer of visibleOffers; track offer.id) {
-        <div class="offer-card">
+        <div class="offer-card" [class.selected]="offer.id === selectedOfferId">
           <div class="header">
             <strong>{{ offer.airlineCode }}</strong>
             <span class="offer-id">ID: {{ offer.id }}</span>
@@ -65,6 +72,11 @@
                     [attr.aria-expanded]="expandedOfferIds.has(offer.id)" 
                     (click)="toggleDetails(offer.id)">
               {{ expandedOfferIds.has(offer.id) ? 'Hide details' : 'Show details' }}
+            </button>
+            <button class="select-offer" 
+                    (click)="selectOffer(offer.id, offer.version)"
+                    [disabled]="selectionStatus === 'validating'">
+              Select
             </button>
           </div>
 
