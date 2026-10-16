@@ -13,6 +13,7 @@ type OfferSortOrder = 'original' | 'price' | 'duration';
 
 const DEFAULT_LOAD_ERROR = 'Unable to load offers.';
 const MIXED_CURRENCY_ERROR = 'Cannot display offers: Mixed currencies are not supported.';
+const INVALID_VALUES_ERROR = 'Cannot display offers: invalid price or duration.';
 
 @Component({
   selector: 'app-flight-list',
@@ -92,6 +93,22 @@ export class FlightListComponent {
       if (offers.some((offer) => offer.totalPrice.currency !== currency)) {
         this.offers = [];
         this.errorMessage = MIXED_CURRENCY_ERROR;
+        this.status = 'error';
+        this.changeDetector.markForCheck();
+        return;
+      }
+
+      const hasInvalidValues = offers.some(
+        (offer) =>
+          !Number.isSafeInteger(offer.totalPrice.amountMinor) ||
+          offer.totalPrice.amountMinor < 0 ||
+          !Number.isSafeInteger(offer.durationMinutes) ||
+          offer.durationMinutes < 0,
+      );
+
+      if (hasInvalidValues) {
+        this.offers = [];
+        this.errorMessage = INVALID_VALUES_ERROR;
         this.status = 'error';
         this.changeDetector.markForCheck();
         return;
