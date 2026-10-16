@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, ElementRef, ViewChildren, QueryList } from '@angular/core';
 import type { FlightOffer } from '../flight-offer';
 import { sortOffersByDuration } from '../flight-offer-duration-sort';
 import { sortOffersByPrice } from '../flight-offer-sort';
@@ -45,15 +45,28 @@ export class FlightListComponent {
   selectionMessage = '';
   selectedOfferId: string | null = null;
 
+  @ViewChildren('sortSelect') sortSelectElement!: QueryList<ElementRef<HTMLSelectElement>>;
+
   onSortChange(value: string): void {
     if (value !== 'original' && value !== 'price' && value !== 'duration') return;
     this.sortOrder = value;
     this.applyTransformations();
+    this.ensureFocusMaintained();
   }
 
   onFilterChange(value: string): void {
     this.maxStops = value === 'any' ? null : parseInt(value, 10);
     this.applyTransformations();
+    this.ensureFocusMaintained();
+  }
+
+  private ensureFocusMaintained(): void {
+    setTimeout(() => {
+        if (!document.activeElement || document.activeElement.tagName === 'BODY') {
+             const selectEl = this.sortSelectElement.first?.nativeElement;
+             if (selectEl) selectEl.focus();
+        }
+    }, 0);
   }
 
   private applyTransformations(): void {
@@ -94,7 +107,7 @@ export class FlightListComponent {
     
     this.selectionStatus = 'validating';
     this.selectedOfferId = offerId;
-    this.selectionMessage = 'Validating selection...';
+    this.selectionMessage = 'Validating selection…';
     this.changeDetector.markForCheck();
 
     try {
@@ -102,22 +115,26 @@ export class FlightListComponent {
       
       if (response.status === 'VALIDATED') {
         this.selectionStatus = 'validated';
-        this.selectionMessage = 'Selection validated';
+        this.selectionMessage = 'Selection validated. No reservation has been made.';
       } else {
         this.selectionStatus = 'error';
-        this.selectionMessage = 'Unexpected validation status.';
+        this.selectionMessage = 'Unable to validate the selection. Try again.';
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
-        if (error.message === 'OFFER_STALE' || error.message === 'OFFER_UNAVAILABLE') {
+        if (error.message.includes('OFFER_STALE') || error.message.includes('has changed')) {
             this.selectionStatus = 'conflict';
+            this.selectionMessage = 'This offer has changed. Search again.';
+        } else if (error.message.includes('OFFER_UNAVAILABLE') || error.message.includes('no longer available')) {
+            this.selectionStatus = 'conflict';
+            this.selectionMessage = 'This offer is no longer available. Search again.';
         } else {
             this.selectionStatus = 'error';
+            this.selectionMessage = 'Unable to validate the selection. Try again.';
         }
-        this.selectionMessage = error.message;
       } else {
         this.selectionStatus = 'error';
-        this.selectionMessage = 'An unexpected error occurred during validation.';
+        this.selectionMessage = 'Unable to validate the selection. Try again.';
       }
     }
     this.changeDetector.markForCheck();

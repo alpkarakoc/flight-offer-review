@@ -11,10 +11,17 @@
   <button type="submit">Search offers</button>
 </form>
 
-@if (status === 'loading') {
-  <p role="status">Loading offers...</p>
-} @else if (status === 'error') {
-  <p role="alert">{{ errorMessage }}</p>
+<div aria-live="polite" class="status-announcer">
+  @if (status === 'loading') {
+    <p role="status">Loading offers...</p>
+  }
+  @if (status === 'success' && visibleOffers.length === 0) {
+    <p role="status">No offers found.</p>
+  }
+</div>
+
+@if (status === 'error') {
+  <p role="alert" aria-live="assertive">{{ errorMessage }}</p>
 } @else if (status === 'success') {
   <div class="controls">
     <label for="offer-sort">Sort offers</label>
@@ -35,11 +42,11 @@
     </select>
   </div>
   @if (sortError) {
-    <p role="alert">{{ sortError }}</p>
+    <p role="alert" aria-live="assertive">{{ sortError }}</p>
   } @else {
     
     @if (selectionStatus !== 'idle') {
-      <div class="selection-status" role="alert" [ngClass]="selectionStatus">
+      <div class="selection-status" role="alert" aria-live="assertive" [ngClass]="selectionStatus">
         {{ selectionMessage }}
       </div>
     }
@@ -70,18 +77,21 @@
           <div class="actions">
             <button class="toggle-details" 
                     [attr.aria-expanded]="expandedOfferIds.has(offer.id)" 
+                    [attr.aria-controls]="'details-' + offer.id"
+                    [attr.aria-label]="(expandedOfferIds.has(offer.id) ? 'Hide details for offer ' : 'Show details for offer ') + offer.id"
                     (click)="toggleDetails(offer.id)">
               {{ expandedOfferIds.has(offer.id) ? 'Hide details' : 'Show details' }}
             </button>
             <button class="select-offer" 
                     (click)="selectOffer(offer.id, offer.version)"
+                    [attr.aria-label]="'Validate selection for offer ' + offer.id"
                     [disabled]="selectionStatus === 'validating'">
-              Select
+              Validate selection
             </button>
           </div>
 
           @if (expandedOfferIds.has(offer.id)) {
-            <div class="offer-details">
+            <div class="offer-details" [id]="'details-' + offer.id">
               <div class="segments">
                 @for (segment of offer.segments; track $index) {
                   <div class="segment">
@@ -99,8 +109,6 @@
             </div>
           }
         </div>
-      } @empty {
-        <p>No offers found.</p>
       }
     </div>
   }

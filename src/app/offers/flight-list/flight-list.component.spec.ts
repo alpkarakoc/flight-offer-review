@@ -993,7 +993,7 @@ describe('FlightListComponent', () => {
     selectButton!.click();
     fixture.detectChanges();
 
-    expect(element.querySelector('.selection-status')?.textContent).toContain('Validating selection...');
+    expect(element.querySelector('.selection-status')?.textContent).toContain('Validating selection…');
     expect(selectButton?.disabled).toBe(true);
 
     resolveSelection({ status: 'VALIDATED', offerId: exampleOffer.id, version: exampleOffer.version });
@@ -1002,14 +1002,14 @@ describe('FlightListComponent', () => {
 
     const statusEl = element.querySelector('.selection-status');
     expect(statusEl?.classList.contains('validated')).toBe(true);
-    expect(statusEl?.textContent).toContain('Selection validated');
+    expect(statusEl?.textContent).toContain('Selection validated. No reservation has been made.');
     expect(selectButton?.disabled).toBe(false);
   });
 
-  it('shows a conflict error when selection fails with OFFER_STALE', async () => {
+  it('shows a conflict error when selection fails with This offer has changed. Search again.', async () => {
     const source = {
       search: () => Promise.resolve([exampleOffer]),
-      select: () => Promise.reject(new Error('OFFER_STALE'))
+      select: () => Promise.reject(new Error('This offer has changed. Search again.'))
     };
 
     await TestBed.configureTestingModule({
@@ -1029,6 +1029,39 @@ describe('FlightListComponent', () => {
 
     const statusEl = element.querySelector('.selection-status');
     expect(statusEl?.classList.contains('conflict')).toBe(true);
-    expect(statusEl?.textContent).toContain('OFFER_STALE');
+    expect(statusEl?.textContent).toContain('This offer has changed. Search again.');
   });
+});
+
+  it('provides unique accessibility attributes linking toggle buttons to details and unique select buttons', async () => {
+    const source = {
+      search: () => Promise.resolve([exampleOffer]),
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const card = element.querySelector('.offer-card');
+    
+    const toggleButton = card!.querySelector<HTMLButtonElement>('button.toggle-details');
+    const selectButton = card!.querySelector<HTMLButtonElement>('button.select-offer');
+
+    expect(toggleButton!.getAttribute('aria-controls')).toBe('details-' + exampleOffer.id);
+    expect(toggleButton!.getAttribute('aria-label')).toContain('Show details for offer ' + exampleOffer.id);
+    expect(selectButton!.getAttribute('aria-label')).toContain('Validate selection for offer ' + exampleOffer.id);
+    
+    toggleButton!.click();
+    fixture.detectChanges();
+    
+    expect(toggleButton!.getAttribute('aria-label')).toContain('Hide details for offer ' + exampleOffer.id);
+    const details = card!.querySelector('.offer-details');
+    expect(details!.id).toBe('details-' + exampleOffer.id);
 });
