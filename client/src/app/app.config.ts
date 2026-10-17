@@ -1,4 +1,8 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { routes } from './app.routes';
@@ -7,9 +11,10 @@ import { FlightOfferHttpSource } from './offers/flight-offer-http-source';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideBrowserGlobalErrorListeners(),
+    provideZonelessChangeDetection(),
     provideRouter(routes),
     provideHttpClient(),
-    { provide: FLIGHT_OFFER_SOURCE, useClass: FlightOfferHttpSource }
-  ]
+    { provide: FLIGHT_OFFER_SOURCE, useClass: FlightOfferHttpSource },
+  ],
 };

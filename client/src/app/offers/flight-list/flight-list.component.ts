@@ -30,11 +30,12 @@ export class FlightListComponent {
   private readonly offerSource = inject(FLIGHT_OFFER_SOURCE);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private latestSearchId = 0;
+  private latestSelectionId = 0;
 
   offers: FlightOffer[] = [];
   status: OfferListStatus = 'idle';
   errorMessage = DEFAULT_LOAD_ERROR;
-  
+
   sortOrder: OfferSortOrder = 'original';
   maxStops: number | null = null;
   visibleOffers: FlightOffer[] = [];
@@ -62,10 +63,10 @@ export class FlightListComponent {
 
   private ensureFocusMaintained(): void {
     setTimeout(() => {
-        if (!document.activeElement || document.activeElement.tagName === 'BODY') {
-             const selectEl = this.sortSelectElement.first?.nativeElement;
-             if (selectEl) selectEl.focus();
-        }
+      if (!document.activeElement || document.activeElement.tagName === 'BODY') {
+        const selectEl = this.sortSelectElement.first?.nativeElement;
+        if (selectEl) selectEl.focus();
+      }
     }, 0);
   }
 
@@ -92,6 +93,13 @@ export class FlightListComponent {
     }
 
     this.visibleOffers = result;
+
+    const visibleIds = new Set(result.map((offer) => offer.id));
+    for (const expandedId of Array.from(this.expandedOfferIds)) {
+      if (!visibleIds.has(expandedId)) {
+        this.expandedOfferIds.delete(expandedId);
+      }
+    }
   }
 
   toggleDetails(offerId: string): void {
@@ -104,7 +112,10 @@ export class FlightListComponent {
 
   async selectOffer(offerId: string, version: number): Promise<void> {
     if (this.selectionStatus === 'validating') return;
-    
+
+    const searchIdAtStart = this.latestSearchId;
+    const selectionId = ++this.latestSelectionId;
+
     this.selectionStatus = 'validating';
     this.selectedOfferId = offerId;
     this.selectionMessage = 'Validating selection…';
@@ -112,8 +123,17 @@ export class FlightListComponent {
 
     try {
       const response = await this.offerSource.select({ offerId, version });
-      
-      if (response.status === 'VALIDATED') {
+
+      if (searchIdAtStart !== this.latestSearchId || selectionId !== this.latestSelectionId) {
+        return;
+      }
+
+      if (
+        response &&
+        response.status === 'VALIDATED' &&
+        response.offerId === offerId &&
+        response.version === version
+      ) {
         this.selectionStatus = 'validated';
         this.selectionMessage = 'Selection validated. No reservation has been made.';
       } else {
@@ -121,16 +141,23 @@ export class FlightListComponent {
         this.selectionMessage = 'Unable to validate the selection. Try again.';
       }
     } catch (error: unknown) {
+      if (searchIdAtStart !== this.latestSearchId || selectionId !== this.latestSelectionId) {
+        return;
+      }
+
       if (error instanceof Error) {
         if (error.message.includes('OFFER_STALE') || error.message.includes('has changed')) {
-            this.selectionStatus = 'conflict';
-            this.selectionMessage = 'This offer has changed. Search again.';
-        } else if (error.message.includes('OFFER_UNAVAILABLE') || error.message.includes('no longer available')) {
-            this.selectionStatus = 'conflict';
-            this.selectionMessage = 'This offer is no longer available. Search again.';
+          this.selectionStatus = 'conflict';
+          this.selectionMessage = 'This offer has changed. Search again.';
+        } else if (
+          error.message.includes('OFFER_UNAVAILABLE') ||
+          error.message.includes('no longer available')
+        ) {
+          this.selectionStatus = 'conflict';
+          this.selectionMessage = 'This offer is no longer available. Search again.';
         } else {
-            this.selectionStatus = 'error';
-            this.selectionMessage = 'Unable to validate the selection. Try again.';
+          this.selectionStatus = 'error';
+          this.selectionMessage = 'Unable to validate the selection. Try again.';
         }
       } else {
         this.selectionStatus = 'error';
@@ -155,13 +182,14 @@ export class FlightListComponent {
 
   async search(criteria: FlightSearchCriteria): Promise<void> {
     const searchId = ++this.latestSearchId;
+    this.latestSelectionId++;
     this.sortOrder = 'original';
     this.maxStops = null;
     this.visibleOffers = [];
     this.sortError = '';
     this.errorMessage = DEFAULT_LOAD_ERROR;
     this.expandedOfferIds.clear();
-    
+
     this.selectionStatus = 'idle';
     this.selectionMessage = '';
     this.selectedOfferId = null;

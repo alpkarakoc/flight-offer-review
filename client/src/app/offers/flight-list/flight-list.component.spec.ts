@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { FlightOffer, Money } from '../flight-offer';
+import type { FlightOffer, FlightSegment, Money } from '../flight-offer';
 import { exampleOffer } from '../flight-offer.fixture';
 import {
   FLIGHT_OFFER_SOURCE,
@@ -14,31 +14,108 @@ const makeOffer = (
   durationMinutes = exampleOffer.durationMinutes,
   stops = exampleOffer.stops,
 ): FlightOffer => {
-  const taxesMinor = Math.floor(amountMinor * 0.1);
-  const feesMinor = Math.floor(amountMinor * 0.1);
-  const baseFareMinor = amountMinor - taxesMinor - feesMinor;
-  
+  const safeAmount = amountMinor >= 0 && Number.isSafeInteger(amountMinor) ? amountMinor : 500000;
+  const taxesMinor = Math.floor(safeAmount * 0.1);
+  const feesMinor = Math.floor(safeAmount * 0.1);
+  const baseFareMinor = safeAmount - taxesMinor - feesMinor;
+
+  const startMs = Date.parse('2026-10-14T08:00:00Z');
+  const validDuration = durationMinutes > 0 && Number.isSafeInteger(durationMinutes) ? durationMinutes : 180;
+  const endMs = startMs + validDuration * 60_000;
+  const toIsoZ = (ms: number) => new Date(ms).toISOString().replace('.000Z', 'Z');
+
+  const departureDate = toIsoZ(startMs);
+  const arrivalDate = toIsoZ(endMs);
+
+  let segments: FlightSegment[];
+  if (stops === 1) {
+    const s1Arr = startMs + 40 * 60_000;
+    const s2Dep = startMs + 60 * 60_000;
+    segments = [
+      {
+        origin: 'IST',
+        destination: 'FRA',
+        departureDate,
+        arrivalDate: toIsoZ(s1Arr),
+        airlineCode: 'TK',
+        flightNumber: '1000',
+      },
+      {
+        origin: 'FRA',
+        destination: 'LHR',
+        departureDate: toIsoZ(s2Dep),
+        arrivalDate,
+        airlineCode: 'LH',
+        flightNumber: '1001',
+      },
+    ];
+  } else if (stops === 2) {
+    const s1Arr = startMs + 30 * 60_000;
+    const s2Dep = startMs + 45 * 60_000;
+    const s2Arr = startMs + 75 * 60_000;
+    const s3Dep = startMs + 90 * 60_000;
+    segments = [
+      {
+        origin: 'IST',
+        destination: 'FRA',
+        departureDate,
+        arrivalDate: toIsoZ(s1Arr),
+        airlineCode: 'TK',
+        flightNumber: '1000',
+      },
+      {
+        origin: 'FRA',
+        destination: 'CDG',
+        departureDate: toIsoZ(s2Dep),
+        arrivalDate: toIsoZ(s2Arr),
+        airlineCode: 'LH',
+        flightNumber: '1001',
+      },
+      {
+        origin: 'CDG',
+        destination: 'LHR',
+        departureDate: toIsoZ(s3Dep),
+        arrivalDate,
+        airlineCode: 'AF',
+        flightNumber: '1002',
+      },
+    ];
+  } else {
+    segments = [
+      {
+        origin: 'IST',
+        destination: 'LHR',
+        departureDate,
+        arrivalDate,
+        airlineCode: 'TK',
+        flightNumber: '1979',
+      },
+    ];
+  }
+
   return {
     ...exampleOffer,
     id,
+    departureDate,
+    arrivalDate,
     durationMinutes,
     stops,
     totalPrice: { amountMinor, currency },
-    segments: exampleOffer.segments.map(seg => ({ ...seg })),
+    segments,
     priceBreakdown: { baseFareMinor, taxesMinor, feesMinor },
   };
 };
 
 const dummySource = {
   search: () => Promise.resolve([]),
-  select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+  select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
 };
 
 describe('FlightListComponent', () => {
   it('renders neither offer cards nor an empty message in initial idle state', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
-      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -54,7 +131,7 @@ describe('FlightListComponent', () => {
   it('shows an empty message without offer cards when search succeeds with no results', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
-      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -71,7 +148,7 @@ describe('FlightListComponent', () => {
   it('shows loading status without offers or an empty message', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
-      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -88,7 +165,7 @@ describe('FlightListComponent', () => {
   it('shows an error alert without stale offers or other states', async () => {
     await TestBed.configureTestingModule({
       imports: [FlightListComponent],
-      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }]
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: dummySource }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FlightListComponent);
@@ -114,7 +191,7 @@ describe('FlightListComponent', () => {
           resolveOffers = resolve;
         });
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -157,7 +234,7 @@ describe('FlightListComponent', () => {
           resolveSearches.push(resolve);
         });
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -177,7 +254,7 @@ describe('FlightListComponent', () => {
       id: 'OFFER-LATEST',
       version: 2,
       totalPrice: { amountMinor: 750000, currency: 'TRY' },
-      priceBreakdown: { baseFareMinor: 750000, taxesMinor: 0, feesMinor: 0 }
+      priceBreakdown: { baseFareMinor: 750000, taxesMinor: 0, feesMinor: 0 },
     };
 
     const firstSearch = fixture.componentInstance.search(firstCriteria);
@@ -215,7 +292,7 @@ describe('FlightListComponent', () => {
           searches.push({ resolve, reject });
         });
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -236,7 +313,7 @@ describe('FlightListComponent', () => {
       id: 'OFFER-LATEST',
       version: 2,
       totalPrice: { amountMinor: 750000, currency: 'TRY' },
-      priceBreakdown: { baseFareMinor: 750000, taxesMinor: 0, feesMinor: 0 }
+      priceBreakdown: { baseFareMinor: 750000, taxesMinor: 0, feesMinor: 0 },
     };
 
     searches[1].resolve([latestOffer]);
@@ -266,7 +343,7 @@ describe('FlightListComponent', () => {
           resolveOffers = resolve;
         });
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -307,14 +384,16 @@ describe('FlightListComponent', () => {
       durationMinutes: 120,
       stops: 0,
       totalPrice: { amountMinor: 500050, currency: 'TRY' },
-      segments: [{
+      segments: [
+        {
           origin: 'IST',
           destination: 'LHR',
           departureDate: '2026-10-14T08:00:00Z',
           arrivalDate: '2026-10-14T10:00:00Z',
           airlineCode: 'TK',
           flightNumber: '1979',
-      }],
+        },
+      ],
       priceBreakdown: { baseFareMinor: 500050, taxesMinor: 0, feesMinor: 0 },
     };
 
@@ -349,7 +428,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -394,7 +473,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -440,7 +519,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(batches[callCount++]);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -490,7 +569,7 @@ describe('FlightListComponent', () => {
           resolveSearches.push(resolve);
         });
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -540,7 +619,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(batches[callCount++]);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -584,7 +663,7 @@ describe('FlightListComponent', () => {
           resolveSecondSearch = resolve;
         });
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -630,71 +709,17 @@ describe('FlightListComponent', () => {
     expect(renderedIds()).toEqual(['ID: D', 'ID: C']);
   });
 
-  it('filters visible cards by max stops without mutating source offers', async () => {
+  it('filters visible cards by max stops, closes expanded details for filtered-out offers, and does not mutate source offers', async () => {
     const sourceOffers = [
-      {
-          ...makeOffer('A', 500, 'TRY', 120, 0),
-          segments: [{
-              origin: 'IST',
-              destination: 'LHR',
-              departureDate: '2026-10-14T08:00:00Z',
-              arrivalDate: '2026-10-14T10:00:00Z',
-              airlineCode: 'TK',
-              flightNumber: '1979',
-          }]
-      },
-      {
-          ...makeOffer('B', 600, 'TRY', 120, 1),
-          segments: [{
-              origin: 'IST',
-              destination: 'FRA',
-              departureDate: '2026-10-14T08:00:00Z',
-              arrivalDate: '2026-10-14T09:00:00Z',
-              airlineCode: 'TK',
-              flightNumber: '1000',
-          },
-          {
-              origin: 'FRA',
-              destination: 'LHR',
-              departureDate: '2026-10-14T09:30:00Z',
-              arrivalDate: '2026-10-14T10:00:00Z',
-              airlineCode: 'LH',
-              flightNumber: '1001',
-          }]
-      },
-      {
-          ...makeOffer('C', 700, 'TRY', 120, 2),
-          segments: [{
-              origin: 'IST',
-              destination: 'FRA',
-              departureDate: '2026-10-14T08:00:00Z',
-              arrivalDate: '2026-10-14T08:30:00Z',
-              airlineCode: 'TK',
-              flightNumber: '1000',
-          },
-          {
-              origin: 'FRA',
-              destination: 'CDG',
-              departureDate: '2026-10-14T08:45:00Z',
-              arrivalDate: '2026-10-14T09:30:00Z',
-              airlineCode: 'LH',
-              flightNumber: '1001',
-          },
-          {
-              origin: 'CDG',
-              destination: 'LHR',
-              departureDate: '2026-10-14T09:45:00Z',
-              arrivalDate: '2026-10-14T10:00:00Z',
-              airlineCode: 'AF',
-              flightNumber: '1002',
-          }]
-      },
+      makeOffer('A', 500, 'TRY', 120, 0),
+      makeOffer('B', 600, 'TRY', 120, 1),
+      makeOffer('C', 700, 'TRY', 120, 2),
     ];
     const source = {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -710,6 +735,11 @@ describe('FlightListComponent', () => {
     const renderedIds = () =>
       Array.from(element.querySelectorAll('.offer-card .offer-id')).map((el) => el.textContent?.trim());
 
+    const cards = element.querySelectorAll('.offer-card');
+    cards[1].querySelector<HTMLButtonElement>('button.toggle-details')!.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.expandedOfferIds.has('B')).toBe(true);
+
     const select = element.querySelector<HTMLSelectElement>('#stops-filter');
     expect(select).not.toBeNull();
 
@@ -718,6 +748,7 @@ describe('FlightListComponent', () => {
     fixture.detectChanges();
 
     expect(renderedIds()).toEqual(['ID: A']);
+    expect(fixture.componentInstance.expandedOfferIds.has('B')).toBe(false);
     expect(fixture.componentInstance.offers.map((item) => item.id)).toEqual(['A', 'B', 'C']);
 
     select!.value = 'any';
@@ -725,73 +756,20 @@ describe('FlightListComponent', () => {
     fixture.detectChanges();
 
     expect(renderedIds()).toEqual(['ID: A', 'ID: B', 'ID: C']);
+    expect(element.querySelectorAll('.offer-details')).toHaveLength(0);
   });
 
   it('combines filtering and sorting correctly', async () => {
     const sourceOffers = [
-      {
-          ...makeOffer('A', 700, 'TRY', 120, 1),
-          segments: [{
-              origin: 'IST',
-              destination: 'FRA',
-              departureDate: '2026-10-14T08:00:00Z',
-              arrivalDate: '2026-10-14T09:00:00Z',
-              airlineCode: 'TK',
-              flightNumber: '1000',
-          },
-          {
-              origin: 'FRA',
-              destination: 'LHR',
-              departureDate: '2026-10-14T09:30:00Z',
-              arrivalDate: '2026-10-14T10:00:00Z',
-              airlineCode: 'LH',
-              flightNumber: '1001',
-          }]
-      },
-      {
-          ...makeOffer('C', 500, 'TRY', 120, 0),
-          segments: [{
-              origin: 'IST',
-              destination: 'LHR',
-              departureDate: '2026-10-14T08:00:00Z',
-              arrivalDate: '2026-10-14T10:00:00Z',
-              airlineCode: 'TK',
-              flightNumber: '1979',
-          }]
-      },
-      {
-          ...makeOffer('B', 600, 'TRY', 120, 2),
-          segments: [{
-              origin: 'IST',
-              destination: 'FRA',
-              departureDate: '2026-10-14T08:00:00Z',
-              arrivalDate: '2026-10-14T08:30:00Z',
-              airlineCode: 'TK',
-              flightNumber: '1000',
-          },
-          {
-              origin: 'FRA',
-              destination: 'CDG',
-              departureDate: '2026-10-14T08:45:00Z',
-              arrivalDate: '2026-10-14T09:30:00Z',
-              airlineCode: 'LH',
-              flightNumber: '1001',
-          },
-          {
-              origin: 'CDG',
-              destination: 'LHR',
-              departureDate: '2026-10-14T09:45:00Z',
-              arrivalDate: '2026-10-14T10:00:00Z',
-              airlineCode: 'AF',
-              flightNumber: '1002',
-          }]
-      },
+      makeOffer('A', 700, 'TRY', 120, 1),
+      makeOffer('C', 500, 'TRY', 120, 0),
+      makeOffer('B', 600, 'TRY', 120, 2),
     ];
     const source = {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -818,40 +796,12 @@ describe('FlightListComponent', () => {
   });
 
   it('shows empty message when filter excludes all offers and resets on new search', async () => {
-    const sourceOffers = [
-      {
-          ...makeOffer('A', 500, 'TRY', 120, 2),
-          segments: [{
-              origin: 'IST',
-              destination: 'FRA',
-              departureDate: '2026-10-14T08:00:00Z',
-              arrivalDate: '2026-10-14T08:30:00Z',
-              airlineCode: 'TK',
-              flightNumber: '1000',
-          },
-          {
-              origin: 'FRA',
-              destination: 'CDG',
-              departureDate: '2026-10-14T08:45:00Z',
-              arrivalDate: '2026-10-14T09:30:00Z',
-              airlineCode: 'LH',
-              flightNumber: '1001',
-          },
-          {
-              origin: 'CDG',
-              destination: 'LHR',
-              departureDate: '2026-10-14T09:45:00Z',
-              arrivalDate: '2026-10-14T10:00:00Z',
-              airlineCode: 'AF',
-              flightNumber: '1002',
-          }]
-      }
-    ];
+    const sourceOffers = [makeOffer('A', 500, 'TRY', 120, 2)];
     const source = {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve(sourceOffers);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -887,7 +837,7 @@ describe('FlightListComponent', () => {
       search(_criteria: FlightSearchCriteria): Promise<FlightOffer[]> {
         return Promise.resolve([makeOffer('OFFER-DETAILS', 500000, 'TRY', 180, 0)]);
       },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -917,11 +867,11 @@ describe('FlightListComponent', () => {
     expect(toggleButton!.getAttribute('aria-expanded')).toBe('true');
     details = card!.querySelector('.offer-details');
     expect(details).not.toBeNull();
-    
+
     expect(details!.textContent).toContain('TK 1979');
     expect(details!.textContent).toContain('IST');
     expect(details!.textContent).toContain('LHR');
-    
+
     expect(details!.textContent).toContain('Base fare');
     expect(details!.textContent).toContain('4,000.00');
     expect(details!.textContent).toContain('Taxes');
@@ -940,12 +890,14 @@ describe('FlightListComponent', () => {
       ...exampleOffer,
       priceBreakdown: { baseFareMinor: 0, taxesMinor: 0, feesMinor: 0 },
     };
-    const batches: FlightOffer[][] = [ [invalidOffer], [exampleOffer] ];
+    const batches: FlightOffer[][] = [[invalidOffer], [exampleOffer]];
     let callCount = 0;
 
     const source = {
-      search(): Promise<FlightOffer[]> { return Promise.resolve(batches[callCount++]); },
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      search(): Promise<FlightOffer[]> {
+        return Promise.resolve(batches[callCount++]);
+      },
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -971,11 +923,14 @@ describe('FlightListComponent', () => {
     expect(element.querySelector('.offer-card')).not.toBeNull();
   });
 
-  it('validates an offer selection successfully', async () => {
+  it('validates an offer selection when response matches offerId and version, and rejects mismatched responses', async () => {
     let resolveSelection!: (res: any) => void;
     const source = {
       search: () => Promise.resolve([exampleOffer]),
-      select: () => new Promise<any>((resolve) => { resolveSelection = resolve; })
+      select: () =>
+        new Promise<any>((resolve) => {
+          resolveSelection = resolve;
+        }),
     };
 
     await TestBed.configureTestingModule({
@@ -989,7 +944,7 @@ describe('FlightListComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     const selectButton = element.querySelector<HTMLButtonElement>('button.select-offer');
-    
+
     selectButton!.click();
     fixture.detectChanges();
 
@@ -1004,12 +959,27 @@ describe('FlightListComponent', () => {
     expect(statusEl?.classList.contains('validated')).toBe(true);
     expect(statusEl?.textContent).toContain('Selection validated. No reservation has been made.');
     expect(selectButton?.disabled).toBe(false);
+
+    // Mismatched version from server must be rejected as error
+    selectButton!.click();
+    resolveSelection({ status: 'VALIDATED', offerId: exampleOffer.id, version: 999 });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.selection-status')?.classList.contains('error')).toBe(true);
+    expect(element.querySelector('.selection-status')?.textContent).toContain(
+      'Unable to validate the selection. Try again.',
+    );
   });
 
-  it('shows a conflict error when selection fails with This offer has changed. Search again.', async () => {
+  it('ignores stale selection responses that resolve after a new search starts', async () => {
+    let resolveSelection!: (res: any) => void;
     const source = {
       search: () => Promise.resolve([exampleOffer]),
-      select: () => Promise.reject(new Error('This offer has changed. Search again.'))
+      select: () =>
+        new Promise<any>((resolve) => {
+          resolveSelection = resolve;
+        }),
     };
 
     await TestBed.configureTestingModule({
@@ -1023,20 +993,64 @@ describe('FlightListComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('button.select-offer')!.click();
-    
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectionStatus).toBe('validating');
+
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-15' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectionStatus).toBe('idle');
+
+    resolveSelection({ status: 'VALIDATED', offerId: exampleOffer.id, version: exampleOffer.version });
+    await Promise.resolve();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const statusEl = element.querySelector('.selection-status');
+    expect(fixture.componentInstance.selectionStatus).toBe('idle');
+    expect(element.querySelector('.selection-status')).toBeNull();
+  });
+
+  it('shows a conflict error when selection fails with OFFER_STALE or OFFER_UNAVAILABLE', async () => {
+    let errorCode = 'OFFER_STALE';
+    const source = {
+      search: () => Promise.resolve([exampleOffer]),
+      select: () => Promise.reject(new Error(errorCode)),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [FlightListComponent],
+      providers: [{ provide: FLIGHT_OFFER_SOURCE, useValue: source }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(FlightListComponent);
+    await fixture.componentInstance.search({ origin: 'IST', destination: 'LHR', date: '2026-10-14' });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('button.select-offer')!.click();
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    let statusEl = element.querySelector('.selection-status');
     expect(statusEl?.classList.contains('conflict')).toBe(true);
     expect(statusEl?.textContent).toContain('This offer has changed. Search again.');
+
+    errorCode = 'OFFER_UNAVAILABLE';
+    element.querySelector<HTMLButtonElement>('button.select-offer')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    statusEl = element.querySelector('.selection-status');
+    expect(statusEl?.classList.contains('conflict')).toBe(true);
+    expect(statusEl?.textContent).toContain('This offer is no longer available. Search again.');
   });
-});
 
   it('provides unique accessibility attributes linking toggle buttons to details and unique select buttons', async () => {
     const source = {
       search: () => Promise.resolve([exampleOffer]),
-      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 })
+      select: () => Promise.resolve({ status: 'VALIDATED', offerId: '', version: 0 }),
     };
 
     await TestBed.configureTestingModule({
@@ -1050,18 +1064,19 @@ describe('FlightListComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     const card = element.querySelector('.offer-card');
-    
+
     const toggleButton = card!.querySelector<HTMLButtonElement>('button.toggle-details');
     const selectButton = card!.querySelector<HTMLButtonElement>('button.select-offer');
 
     expect(toggleButton!.getAttribute('aria-controls')).toBe('details-' + exampleOffer.id);
     expect(toggleButton!.getAttribute('aria-label')).toContain('Show details for offer ' + exampleOffer.id);
     expect(selectButton!.getAttribute('aria-label')).toContain('Validate selection for offer ' + exampleOffer.id);
-    
+
     toggleButton!.click();
     fixture.detectChanges();
-    
+
     expect(toggleButton!.getAttribute('aria-label')).toContain('Hide details for offer ' + exampleOffer.id);
     const details = card!.querySelector('.offer-details');
     expect(details!.id).toBe('details-' + exampleOffer.id);
+  });
 });
