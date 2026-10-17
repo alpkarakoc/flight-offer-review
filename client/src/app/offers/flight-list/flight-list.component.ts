@@ -140,25 +140,18 @@ export class FlightListComponent {
         this.selectionStatus = 'error';
         this.selectionMessage = 'Unable to validate the selection. Try again.';
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       if (searchIdAtStart !== this.latestSearchId || selectionId !== this.latestSelectionId) {
         return;
       }
 
-      if (error instanceof Error) {
-        if (error.message.includes('OFFER_STALE') || error.message.includes('has changed')) {
-          this.selectionStatus = 'conflict';
-          this.selectionMessage = 'This offer has changed. Search again.';
-        } else if (
-          error.message.includes('OFFER_UNAVAILABLE') ||
-          error.message.includes('no longer available')
-        ) {
-          this.selectionStatus = 'conflict';
-          this.selectionMessage = 'This offer is no longer available. Search again.';
-        } else {
-          this.selectionStatus = 'error';
-          this.selectionMessage = 'Unable to validate the selection. Try again.';
-        }
+      const errorCode = error?.code || '';
+      if (errorCode === 'OFFER_STALE') {
+        this.selectionStatus = 'conflict';
+        this.selectionMessage = 'This offer has changed. Search again.';
+      } else if (errorCode === 'OFFER_UNAVAILABLE') {
+        this.selectionStatus = 'conflict';
+        this.selectionMessage = 'This offer is no longer available. Search again.';
       } else {
         this.selectionStatus = 'error';
         this.selectionMessage = 'Unable to validate the selection. Try again.';

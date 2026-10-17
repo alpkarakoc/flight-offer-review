@@ -1015,7 +1015,7 @@ describe('FlightListComponent', () => {
     let errorCode = 'OFFER_STALE';
     const source = {
       search: () => Promise.resolve([exampleOffer]),
-      select: () => Promise.reject(new Error(errorCode)),
+      select: () => Promise.reject({ code: errorCode }),
     };
 
     await TestBed.configureTestingModule({

@@ -4,6 +4,13 @@ import { firstValueFrom } from 'rxjs';
 import type { FlightOfferSource, FlightSearchCriteria, SelectionRequest, SelectionResponse } from './flight-offer-source';
 import type { FlightOffer } from './flight-offer';
 
+export class ApiError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 @Injectable()
 export class FlightOfferHttpSource implements FlightOfferSource {
   private readonly http = inject(HttpClient);
@@ -27,7 +34,7 @@ export class FlightOfferHttpSource implements FlightOfferSource {
       );
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.error && error.error.code) {
-        throw new Error(error.error.message || error.error.code);
+        throw new ApiError(error.error.code, error.error.message || error.error.code);
       }
       throw error;
     }
