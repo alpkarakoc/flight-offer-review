@@ -1,28 +1,24 @@
-# Manual Accessibility and E2E Keyboard Verification Report
+# Accessibility and Focus Lifecycle Audit
 
-**Context:** This report validates the R5 requirements (Keyboard navigation, Focus management, Screen Reader compatibility) for the Flight Offer Portfolio Demo.
+**Context:** A limited-scope portfolio demo implementing a synthetic flight offer inspection and revalidation flow, passing automated tests, production build, and real HTTP smoke checks on CI.
+
+## Testing Environment
+* **Date:** 2026-10-17
+* **OS / Browser / Screen Reader:** Not run (Automated DOM logic validation only)
 
 ## 1. Search Flow & Live Regions
-* **Input:** `[Tab]` through "Origin", "Destination", "Departure date" inputs. Press `[Enter]` on "Search offers".
-* **System:** Angular triggers `search()` and state transitions.
-* **Output:** Focus shifts correctly. VoiceOver detects `aria-live="polite"` region and announces: "Loading offers...".
+* **Expected Behavior:** Keyboard navigation reaches "Search offers". On submission, the `aria-live="polite"` region renders the "Loading offers..." text.
+* **Status:** DOM logic verified. Manual VoiceOver test: Not run.
 
 ## 2. Filtering & Focus Retention
-* **Input:** `[Tab]` to "Max stops" select element. Press `[Arrow Down]` to change to "Direct only".
-* **System:** Angular filters results and executes `ensureFocusMaintained()`.
-* **Output:** Focus is successfully forced back to the select element. VoiceOver reads the new selection without losing context.
+* **Expected Behavior:** Changing the "Max stops" filter triggers a re-render. If the active focus drops to the `body` during this DOM update, `ensureFocusMaintained()` explicitly forces focus to the **"Sort offers"** select element to prevent the user from losing their navigation context.
+* **Status:** Code logic verified. Manual keyboard test: Not run.
 
-## 3. Offer Details Expansion (aria-controls & aria-expanded)
-* **Input:** `[Tab]` to the first offer's action buttons. Focus lands on "Show details for offer OFFER-1". Press `[Space]` or `[Enter]`.
-* **System:** `toggleDetails` fires. `expandedOfferIds` mutates.
-* **Output:** `aria-expanded` shifts from "false" to "true". The `#details-OFFER-1` region renders. VoiceOver announces the expanded state and the price breakdown elements natively. Pressing `[Enter]` again collapses the region, reverting `aria-expanded` to "false". Focus remains on the toggle button.
+## 3. Offer Details Expansion
+* **Expected Behavior:** Activating the "Show details" button toggles its `aria-expanded` state to `true` and mounts the region linked by `aria-controls`. A screen reader will announce the state change of the button, but the user must manually navigate into the newly rendered region to read the segments and price breakdown. Focus remains on the toggle button.
+* **Status:** DOM logic verified. Manual VoiceOver test: Not run.
 
-## 4. Selection & Conflict Handling (OFFER_STALE)
-* **Input:** `[Tab]` to "Validate selection for offer OFFER-1" button. Press `[Enter]`.
-* **System:** Client disables the button, changes status to `validating`, and dispatches HTTP POST. Server delays, then rejects with `409 OFFER_STALE`.
-* **Output:** 
-  1. Immediate VoiceOver announcement via `aria-live="assertive"`: "Validating selection…"
-  2. Post-rejection announcement via `aria-live="assertive"`: "This offer has changed. Search again."
-  3. Visual state shifts to conflict styling without any implicit booking confirmations.
-
-**Verdict:** The application fully supports keyboard-only operation, maintains explicit focus lifecycle during DOM mutations, and broadcasts strict, descriptive state transitions to screen readers. R5 criteria met.
+## 4. Selection & Conflict Handling
+* **Expected Behavior (Validation):** Selecting an offer disables the button and updates the `aria-live="assertive"` region to "Validating selection…".
+* **Expected Behavior (Success vs Conflict):** Under normal flow, the client sends the current version (e.g., `2`), and the server returns `200 VALIDATED`. To verify the `409 OFFER_STALE` handling in the UI, the client payload must be artificially modified to send an older version. Upon a `409` response, the `aria-live` region updates to "This offer has changed. Search again."
+* **Status:** Component logic verified. Manual VoiceOver test: Not run.
